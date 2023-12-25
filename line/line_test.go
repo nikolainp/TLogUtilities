@@ -19,6 +19,18 @@ func Test_processFile(t *testing.T) {
 		},
 		{
 			"test 2",
+			`32:47.733006-0,EXCPCNTX
+32:47.733007-0,EXCP,0
+32:47.733013-0,EXCP,1
+32:54.905000-0,EXCP,1`,
+			`32:47.733006-0,EXCPCNTX
+32:47.733007-0,EXCP,0
+32:47.733013-0,EXCP,1
+32:54.905000-0,EXCP,1
+`,
+		},
+		{
+			"test 3",
 			`32:47.733006-0,EXCPCNTX,0,ClientComputerName=,ServerComputerName=,UserName=,ConnectString=
 32:47.733007-0,EXCP,0,process=ragent,OSThread=3668,Exception=81029657-3fe6-4cd6-80c0-36de78fe6657,Descr='src\rtrsrvc\src\remoteinterfaceimpl.cpp(1232):
 81029657-3fe6-4cd6-80c0-36de78fe6657:  server_addr=tcp://App:1560 descr=10054(0x00002746): Удаленный хост принудительно разорвал существующее подключение.  line=1582 file=d:\jenkins\ci_builder2\windowsbuild2\platform\src\rtrsrvc\src\dataexchangetcpclientimpl.cpp'
