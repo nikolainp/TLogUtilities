@@ -4,5 +4,16 @@
 			"path": "."
 		}
 	],
-	"settings": {}
+	"settings": {
+		"files.autoSave": "afterDelay",
+		"editor.minimap.enabled": false,
+		"gopls": {
+			"ui.semanticTokens": true
+		},
+		"go.inlayHints.assignVariableTypes": true,
+		"go.inlayHints.compositeLiteralTypes": true,
+		"go.inlayHints.constantValues": true,
+		"go.inlayHints.parameterNames": false,
+		"go.inlayHints.rangeVariableTypes": true
+	}
 }
