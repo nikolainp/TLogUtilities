@@ -13,10 +13,20 @@ func main() {
 }
 
 func processFile(sIn io.Reader, sOut io.Writer) {
+	var str string
+	var check lineChecker
+
 	scanner := bufio.NewScanner(sIn)
+	check.init()
+
 	for scanner.Scan() {
-		str := scanner.Text()
-		fmt.Fprintln(sOut, str)
+		str = scanner.Text()
+		if check.isFirstLine(str) {
+			fmt.Fprintln(sOut, str)
+		} else {
+			fmt.Fprintln(sOut, str)
+		}
+
 	}
 	if err := scanner.Err(); err != nil {
 		fmt.Fprintln(os.Stderr, "Error: ", err)
