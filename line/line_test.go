@@ -19,14 +19,14 @@ func Test_processFile(t *testing.T) {
 		},
 		{
 			"test 2",
-			`32:47.733006-0,EXCPCNTX
-32:47.733007-0,EXCP,0
-32:47.733013-0,EXCP,1
-32:54.905000-0,EXCP,1`,
-			`32:47.733006-0,EXCPCNTX
-32:47.733007-0,EXCP,0
-32:47.733013-0,EXCP,1
-32:54.905000-0,EXCP,1
+			`32:47.733006-0,EXCPCNTX,
+32:47.733007-0,EXCP,0,
+32:47.733013-0,EXCP,1,
+32:54.905000-0,EXCP,1,`,
+			`32:47.733006-0,EXCPCNTX,
+32:47.733007-0,EXCP,0,
+32:47.733013-0,EXCP,1,
+32:54.905000-0,EXCP,1,
 `,
 		},
 		{
@@ -56,3 +56,46 @@ func Test_processFile(t *testing.T) {
 		})
 	}
 }
+func Test_lineChecker_isFirstLine(t *testing.T) {
+	var obj  lineChecker
+
+
+	tests := []struct {
+		name string
+		in0 string
+		want bool
+	}{
+		{"test 1", "", false},
+		{"test 2", "32:47.733006-0,EXCPCNTX,", true},
+		{"test 3", "81029657-3fe6-4cd6-80c0-36de78fe6657", false},
+	}
+
+	obj.init()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := obj.isFirstLine(tt.in0); got != tt.want {
+				t.Errorf("lineChecker.isFirstLine() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+func Benchmark_processFile(b *testing.B) {
+
+	var bufferIn bytes.Buffer
+
+	for i := 0; i < 1000; i++ {
+		bufferIn.WriteString("32:47.733013-0,EXCP,1")
+	}
+
+	streamIn := strings.NewReader(bufferIn.String())
+	streamOut := &bytes.Buffer{}
+
+	b.SetBytes(streamIn.Size())
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		processFile(streamIn, streamOut)
+	}
+}
+
