@@ -7,6 +7,9 @@ import (
 )
 
 func Test_processFile(t *testing.T) {
+	var obj lineChecker
+	obj.init()
+
 	tests := []struct {
 		name     string
 		sIn      string
@@ -49,7 +52,7 @@ func Test_processFile(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			sOut := &bytes.Buffer{}
-			processFile(strings.NewReader(tt.sIn), sOut)
+			obj.processFile(strings.NewReader(tt.sIn), sOut)
 			if gotSOut := sOut.String(); gotSOut != tt.wantSOut {
 				t.Errorf("processFile() = %v, want %v", gotSOut, tt.wantSOut)
 			}
@@ -57,12 +60,11 @@ func Test_processFile(t *testing.T) {
 	}
 }
 func Test_lineChecker_isFirstLine(t *testing.T) {
-	var obj  lineChecker
-
+	var obj lineChecker
 
 	tests := []struct {
 		name string
-		in0 string
+		in0  string
 		want bool
 	}{
 		{"test 1", "", false},
@@ -80,10 +82,11 @@ func Test_lineChecker_isFirstLine(t *testing.T) {
 	}
 }
 
-///////////////////////////////////////////////////////////////////////////////
+// /////////////////////////////////////////////////////////////////////////////
 func Benchmark_processFile(b *testing.B) {
 
 	var bufferIn bytes.Buffer
+	var check lineChecker
 
 	for i := 0; i < 1000; i++ {
 		bufferIn.WriteString("32:47.733013-0,EXCP,1")
@@ -91,11 +94,11 @@ func Benchmark_processFile(b *testing.B) {
 
 	streamIn := strings.NewReader(bufferIn.String())
 	streamOut := &bytes.Buffer{}
+	check.init()
 
 	b.SetBytes(streamIn.Size())
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		processFile(streamIn, streamOut)
+		check.processFile(streamIn, streamOut)
 	}
 }
-
