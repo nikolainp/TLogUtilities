@@ -15,7 +15,8 @@ func main() {
 func processFile(sIn io.Reader, sOut io.Writer) {
 	scanner := bufio.NewScanner(sIn)
 	for scanner.Scan() {
-		fmt.Fprintln(sOut, scanner.Text())
+		str := scanner.Text()
+		fmt.Fprintln(sOut, str)
 	}
 	if err := scanner.Err(); err != nil {
 		fmt.Fprintln(os.Stderr, "Error: ", err)
