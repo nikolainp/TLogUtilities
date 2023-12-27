@@ -29,8 +29,7 @@ func Test_processFile(t *testing.T) {
 			`32:47.733006-0,EXCPCNTX,
 32:47.733007-0,EXCP,0,
 32:47.733013-0,EXCP,1,
-32:54.905000-0,EXCP,1,
-`,
+32:54.905000-0,EXCP,1,`,
 		},
 		{
 			"test 3",

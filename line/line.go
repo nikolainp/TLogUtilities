@@ -30,14 +30,19 @@ func (obj *lineChecker) processFile(sIn io.Reader, sOut io.Writer) {
 
 	scanner := bufio.NewScanner(sIn)
 
+	if scanner.Scan() {
+		str = scanner.Text()
+		fmt.Fprint(sOut, str)
+	}
+
 	for scanner.Scan() {
 		str = scanner.Text()
-		if obj.isFirstLine(str) {
-			fmt.Fprintln(sOut, str)
-		} else {
-			fmt.Fprintln(sOut, str)
-		}
 
+		if obj.isFirstLine(str) {
+			fmt.Fprint(sOut, "\n", str)
+		} else {
+			fmt.Fprint(sOut, "<line>", str)
+		}
 	}
 	if err := scanner.Err(); err != nil {
 		fmt.Fprintln(os.Stderr, "Error: ", err)
