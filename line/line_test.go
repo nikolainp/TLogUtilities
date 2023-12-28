@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func Test_processFile(t *testing.T) {
+func Test_processStream(t *testing.T) {
 	var obj lineChecker
 	obj.init()
 
@@ -26,10 +26,10 @@ func Test_processFile(t *testing.T) {
 32:47.733007-0,EXCP,0,
 32:47.733013-0,EXCP,1,
 32:54.905000-0,EXCP,1,`,
-			`32:47.733006-0,EXCPCNTX,
-32:47.733007-0,EXCP,0,
-32:47.733013-0,EXCP,1,
-32:54.905000-0,EXCP,1,`,
+			`test:32:47.733006-0,EXCPCNTX,
+test:32:47.733007-0,EXCP,0,
+test:32:47.733013-0,EXCP,1,
+test:32:54.905000-0,EXCP,1,`,
 		},
 		{
 			"test 3",
@@ -42,16 +42,16 @@ func Test_processFile(t *testing.T) {
 192.168.7.47:1541:10061(0x0000274D): Подключение не установлено, т.к. конечный компьютер отверг запрос на подключение. ;
 10.10.1.40:1541:10061(0x0000274D): Подключение не установлено, т.к. конечный компьютер отверг запрос на подключение. ;
  line=1056 file=d:\jenkins\ci_builder2\windowsbuild2\platform\src\rtrsrvc\src\dataexchangetcpclientimpl.cpp'`,
-			`32:47.733006-0,EXCPCNTX,0,ClientComputerName=,ServerComputerName=,UserName=,ConnectString=
-32:47.733007-0,EXCP,0,process=ragent,OSThread=3668,Exception=81029657-3fe6-4cd6-80c0-36de78fe6657,Descr='src\rtrsrvc\src\remoteinterfaceimpl.cpp(1232):<line>81029657-3fe6-4cd6-80c0-36de78fe6657:  server_addr=tcp://App:1560 descr=10054(0x00002746): Удаленный хост принудительно разорвал существующее подключение.  line=1582 file=d:\jenkins\ci_builder2\windowsbuild2\platform\src\rtrsrvc\src\dataexchangetcpclientimpl.cpp'
-32:47.733013-0,EXCP,1,process=ragent,OSThread=3668,ClientID=6,Exception=NetDataExchangeException,Descr=' server_addr=tcp://App:1541 descr=10054(0x00002746): Удаленный хост принудительно разорвал существующее подключение.  line=1452 file=d:\jenkins\ci_builder2\windowsbuild2\platform\src\rtrsrvc\src\dataexchangetcpclientimpl.cpp
-32:54.905000-0,EXCP,1,process=ragent,OSThread=3668,ClientID=4223,Exception=NetDataExchangeException,Descr='server_addr=tcp://App:1541 descr=[fe80::b087:822c:47ce:a93f%13]:1541:10061(0x0000274D): Подключение не установлено, т.к. конечный компьютер отверг запрос на подключение. ;<line>[fe80::d1bb:33be:7990:1de2%12]:1541:10061(0x0000274D): Подключение не установлено, т.к. конечный компьютер отверг запрос на подключение. ;<line>192.168.7.47:1541:10061(0x0000274D): Подключение не установлено, т.к. конечный компьютер отверг запрос на подключение. ;<line>10.10.1.40:1541:10061(0x0000274D): Подключение не установлено, т.к. конечный компьютер отверг запрос на подключение. ;<line> line=1056 file=d:\jenkins\ci_builder2\windowsbuild2\platform\src\rtrsrvc\src\dataexchangetcpclientimpl.cpp'`,
+			`test:32:47.733006-0,EXCPCNTX,0,ClientComputerName=,ServerComputerName=,UserName=,ConnectString=
+test:32:47.733007-0,EXCP,0,process=ragent,OSThread=3668,Exception=81029657-3fe6-4cd6-80c0-36de78fe6657,Descr='src\rtrsrvc\src\remoteinterfaceimpl.cpp(1232):<line>81029657-3fe6-4cd6-80c0-36de78fe6657:  server_addr=tcp://App:1560 descr=10054(0x00002746): Удаленный хост принудительно разорвал существующее подключение.  line=1582 file=d:\jenkins\ci_builder2\windowsbuild2\platform\src\rtrsrvc\src\dataexchangetcpclientimpl.cpp'
+test:32:47.733013-0,EXCP,1,process=ragent,OSThread=3668,ClientID=6,Exception=NetDataExchangeException,Descr=' server_addr=tcp://App:1541 descr=10054(0x00002746): Удаленный хост принудительно разорвал существующее подключение.  line=1452 file=d:\jenkins\ci_builder2\windowsbuild2\platform\src\rtrsrvc\src\dataexchangetcpclientimpl.cpp
+test:32:54.905000-0,EXCP,1,process=ragent,OSThread=3668,ClientID=4223,Exception=NetDataExchangeException,Descr='server_addr=tcp://App:1541 descr=[fe80::b087:822c:47ce:a93f%13]:1541:10061(0x0000274D): Подключение не установлено, т.к. конечный компьютер отверг запрос на подключение. ;<line>[fe80::d1bb:33be:7990:1de2%12]:1541:10061(0x0000274D): Подключение не установлено, т.к. конечный компьютер отверг запрос на подключение. ;<line>192.168.7.47:1541:10061(0x0000274D): Подключение не установлено, т.к. конечный компьютер отверг запрос на подключение. ;<line>10.10.1.40:1541:10061(0x0000274D): Подключение не установлено, т.к. конечный компьютер отверг запрос на подключение. ;<line> line=1056 file=d:\jenkins\ci_builder2\windowsbuild2\platform\src\rtrsrvc\src\dataexchangetcpclientimpl.cpp'`,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			sOut := &bytes.Buffer{}
-			obj.processFile(strings.NewReader(tt.sIn), sOut)
+			obj.processStream("test", strings.NewReader(tt.sIn), sOut)
 			if gotSOut := sOut.String(); gotSOut != tt.wantSOut {
 				t.Errorf("processFile() = %v, want %v", gotSOut, tt.wantSOut)
 			}
@@ -82,7 +82,7 @@ func Test_lineChecker_isFirstLine(t *testing.T) {
 }
 
 // /////////////////////////////////////////////////////////////////////////////
-func Benchmark_processFile(b *testing.B) {
+func Benchmark_processStream(b *testing.B) {
 
 	var bufferIn bytes.Buffer
 	var check lineChecker
@@ -98,6 +98,6 @@ func Benchmark_processFile(b *testing.B) {
 	b.SetBytes(streamIn.Size())
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		check.processFile(streamIn, streamOut)
+		check.processStream("", streamIn, streamOut)
 	}
 }

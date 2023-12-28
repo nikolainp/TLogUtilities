@@ -1,3 +1,3 @@
-module github.com/nikolainp/TechnicalLogUtils
+module github.com/nikolainp/TLogUtils
 
 go 1.21.3

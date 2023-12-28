@@ -4,42 +4,88 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
+	"path"
+	"path/filepath"
 	"regexp"
+	"strings"
 )
 
 func main() {
-	var check lineChecker
+	var worker pathWalker
 
-	check.init()
-	check.processFile(os.Stdin, os.Stdout)
+	worker.init()
+	for _, path := range os.Args[1:] {
+		worker.pathWalk(path)
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+type pathWalker struct {
+	check lineChecker
+}
+
+func (obj *pathWalker) init() {
+	obj.check.init()
+}
+
+func (obj *pathWalker) pathWalk(basePath string) {
+	err := filepath.Walk(basePath, func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			fmt.Printf("prevent panic by handling failure accessing a path %q: %v\n", path, err)
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+		obj.doProcess(basePath, path)
+
+		return nil
+	})
+	if err != nil {
+		fmt.Printf("error walking the path %q: %v\n", basePath, err)
+	}
+}
+
+func (obj *pathWalker) doProcess(basePath string, fileName string) {
+	// path, err := os.Getwd()
+	subFileName := path.Join(".", strings.Replace(fileName, basePath, "", 1))
+
+	fileStream, err := os.Open(fileName)
+	if err != nil {
+		fmt.Printf("error walking the path %q: %v\n", fileName, err)
+	}
+	obj.check.processStream(subFileName, fileStream, os.Stdout)
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 type lineChecker struct {
-	check *regexp.Regexp
+	checkFirstLine *regexp.Regexp
 }
 
 func (obj *lineChecker) init() {
-	obj.check, _ = regexp.Compile(`^\d\d\:\d\d\.\d{6}\-\d+\,\w+\,`)
+	obj.checkFirstLine, _ = regexp.Compile(`^\d\d\:\d\d\.\d{6}\-\d+\,\w+\,`)
 }
 
-func (obj *lineChecker) processFile(sIn io.Reader, sOut io.Writer) {
+func (obj *lineChecker) processStream(sName string, sIn io.Reader, sOut io.Writer) {
 	var str string
 
 	scanner := bufio.NewScanner(sIn)
 
 	if scanner.Scan() {
 		str = scanner.Text()
-		fmt.Fprint(sOut, str)
+		fmt.Fprint(sOut, sName, ":", str)
 	}
 
 	for scanner.Scan() {
 		str = scanner.Text()
 
 		if obj.isFirstLine(str) {
-			fmt.Fprint(sOut, "\n", str)
+			fmt.Fprint(sOut, "\n", sName, ":", str)
 		} else {
 			fmt.Fprint(sOut, "<line>", str)
 		}
@@ -50,5 +96,5 @@ func (obj *lineChecker) processFile(sIn io.Reader, sOut io.Writer) {
 }
 
 func (obj *lineChecker) isFirstLine(data string) bool {
-	return obj.check.MatchString(data)
+	return obj.checkFirstLine.MatchString(data)
 }
