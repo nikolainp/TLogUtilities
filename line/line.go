@@ -78,6 +78,9 @@ func (obj *lineChecker) processStream(sName string, sIn io.Reader, sOut io.Write
 
 	if scanner.Scan() {
 		str = scanner.Text()
+		if str[:3] == "\ufeff" {
+			str = str[3:]
+		}
 		fmt.Fprint(sOut, sName, ":", str)
 	}
 
