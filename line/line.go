@@ -50,8 +50,14 @@ func (obj *pathWalker) pathWalk(basePath string) {
 }
 
 func (obj *pathWalker) doProcess(basePath string, fileName string) {
-	// path, err := os.Getwd()
-	subFileName := path.Join(".", strings.Replace(fileName, basePath, "", 1))
+	var subFileName string
+
+	if strings.Compare(basePath, fileName) == 0 {
+		rootPath, _ := os.Getwd()
+		subFileName = path.Join(".", strings.Replace(fileName, rootPath, "", 1))
+	} else {
+		subFileName = path.Join(".", strings.Replace(fileName, basePath, "", 1))
+	}
 
 	fileStream, err := os.Open(fileName)
 	if err != nil {
