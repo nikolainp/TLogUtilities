@@ -6,7 +6,6 @@ import (
 	"io"
 	"io/fs"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -51,12 +50,16 @@ func (obj *pathWalker) pathWalk(basePath string) {
 
 func (obj *pathWalker) doProcess(basePath string, fileName string) {
 	var subFileName string
+	var err error
 
 	if strings.Compare(basePath, fileName) == 0 {
 		rootPath, _ := os.Getwd()
-		subFileName = path.Join(".", strings.Replace(fileName, rootPath, "", 1))
+		subFileName, err = filepath.Rel(rootPath, fileName)
 	} else {
-		subFileName = path.Join(".", strings.Replace(fileName, basePath, "", 1))
+		subFileName, err = filepath.Rel(basePath, fileName)
+	}
+	if err != nil {
+		subFileName = fileName
 	}
 
 	fileStream, err := os.Open(fileName)
@@ -87,6 +90,10 @@ func (obj *lineChecker) processStream(sName string, sIn io.Reader, sOut io.Write
 		if str[:3] == "\ufeff" {
 			str = str[3:]
 		}
+		if len(str) == 0 {
+			return
+		}
+
 		fmt.Fprint(sOut, sName, ":", str)
 	}
 
@@ -99,6 +106,7 @@ func (obj *lineChecker) processStream(sName string, sIn io.Reader, sOut io.Write
 			fmt.Fprint(sOut, "<line>", str)
 		}
 	}
+	fmt.Fprint(sOut, "\n")
 	if err := scanner.Err(); err != nil {
 		fmt.Fprintln(os.Stderr, "Error: ", err)
 	}
