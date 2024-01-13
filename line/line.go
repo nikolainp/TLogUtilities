@@ -8,7 +8,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 )
 
@@ -74,15 +73,11 @@ func (obj *pathWalker) doProcess(basePath string, fileName string) {
 ///////////////////////////////////////////////////////////////////////////////
 
 type lineChecker struct {
-	checkFirstLine *regexp.Regexp
-
 	bufSize int
 	buffer  []byte
 }
 
 func (obj *lineChecker) init() {
-	obj.checkFirstLine, _ = regexp.Compile(`^\d\d\:\d\d\.\d{6}\-\d+\,\w+\,`)
-
 	obj.bufSize = 1024 * 1024 * 10
 	obj.buffer = make([]byte, obj.bufSize)
 }
