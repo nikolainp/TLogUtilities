@@ -61,7 +61,7 @@ test:32:54.905000-0,EXCP,1,process=ragent,OSThread=3668,ClientID=4223,Exception=
 	}
 }
 
-func Test_lineChecker_isFirstLine2(t *testing.T) {
+func Test_lineChecker_isFirstLine(t *testing.T) {
 	var obj lineChecker
 
 	tests := []struct {
@@ -105,7 +105,7 @@ func Benchmark_processStream(b *testing.B) {
 	}
 }
 
-func Benchmark_isFirstLine2(b *testing.B) {
+func Benchmark_isFirstLine(b *testing.B) {
 	var check lineChecker
 	data := []byte(`32:47.733007-0,EXCP,0,process=ragent,OSThread=3668,Exception=81029657-3fe6-4cd6-80c0-36de78fe6657,Descr='src\rtrsrvc\src\remoteinterfaceimpl.cpp(1232):`)
 
