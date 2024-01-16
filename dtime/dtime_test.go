@@ -45,14 +45,6 @@ func Test_lineFilter_isTrueLineByStart(t *testing.T) {
 		time.Date(2024, 1, 12, 15, 35, 0, 2000, time.Local),
 		stop)
 
-	// t1 := time.Date(2024, 1, 12, 15, 35, 0, 2, time.Local)
-	// t2 := time.Date(2024, 1, 12, 15, 35, 0, 2, time.Local)
-	// t3 := t1.Compare(t2)
-
-	// if t3 < 0 {
-	// 	fmt.Print("q")
-	// }
-
 	tests := []struct {
 		name string
 		data []byte
@@ -129,5 +121,34 @@ func Test_getStrTimeFromLine(t *testing.T) {
 				t.Errorf("getStrTimeFromLine() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+
+func Benchmark_isTrueLineByStart(b *testing.B) {
+	var filter lineFilter
+	filter.init(
+		time.Date(2024, 1, 12, 15, 30, 0, 1, time.Local),
+		time.Date(2024, 1, 12, 15, 35, 0, 2, time.Local),
+		stop)
+	data := []byte(`.\rphost_2345\24011215.log:32:47.733007-0,EXCP,`)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		filter.isTrueLineByStart(data)
+	}
+}
+
+func Benchmark_isTrueLineByStop(b *testing.B) {
+	var filter lineFilter
+	filter.init(
+		time.Date(2024, 1, 12, 15, 30, 0, 1, time.Local),
+		time.Date(2024, 1, 12, 15, 35, 0, 2, time.Local),
+		stop)
+	data := []byte(`.\rphost_2345\24011215.log:32:47.733007-0,EXCP,`)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		filter.isTrueLineByStop(data)
 	}
 }
