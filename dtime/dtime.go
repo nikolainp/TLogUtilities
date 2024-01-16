@@ -121,11 +121,11 @@ func getStrTimeFromLine(data []byte) (time []byte, duration []byte) {
 		return nil, nil
 	}
 
-	commaPosition := bytes.Index(data[logPositin+17:], []byte(","))
+	commaPosition := bytes.Index(data[logPositin+18:], []byte(","))
 	if commaPosition == -1 {
 		return nil, nil
 	}
-	strDuration := data[logPositin+17 : logPositin+17+commaPosition]
+	strDuration := data[logPositin+18 : logPositin+18+commaPosition]
 
 	return strTime, strDuration
 }

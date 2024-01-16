@@ -56,6 +56,7 @@ func Test_lineFilter_isTrueLineByStart(t *testing.T) {
 		{"test4", []byte(`.\rphost_2345\24011215.log:42:47.733007-0,EXCP,`), false},
 		{"test5", []byte(`.\rphost_2345\24011215.log:35:00.000001-0,EXCP,`), true},
 		{"test6", []byte(`.\rphost_2345\24011215.log:35:00.000003-0,EXCP,`), false},
+		{"test7", []byte(`.\rphost_2345\24011215.log:35:00.000003-1000,EXCP,`), true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
