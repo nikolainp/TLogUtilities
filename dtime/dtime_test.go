@@ -41,9 +41,17 @@ func Test_lineFilter_init(t *testing.T) {
 func Test_lineFilter_isTrueLineByStart(t *testing.T) {
 	var filter lineFilter
 	filter.init(
-		time.Date(2024, 1, 12, 15, 30, 0, 1, time.UTC),
-		time.Date(2024, 1, 12, 15, 35, 0, 2, time.UTC),
+		time.Date(2024, 1, 12, 15, 30, 0, 1000, time.Local),
+		time.Date(2024, 1, 12, 15, 35, 0, 2000, time.Local),
 		stop)
+
+	// t1 := time.Date(2024, 1, 12, 15, 35, 0, 2, time.Local)
+	// t2 := time.Date(2024, 1, 12, 15, 35, 0, 2, time.Local)
+	// t3 := t1.Compare(t2)
+
+	// if t3 < 0 {
+	// 	fmt.Print("q")
+	// }
 
 	tests := []struct {
 		name string
@@ -54,10 +62,12 @@ func Test_lineFilter_isTrueLineByStart(t *testing.T) {
 		{"test2", []byte(`.\rphost_2345\24011215.log:32:47.733007-0,EXCP,`), true},
 		{"test3", []byte(`.\rphost_2345\24011215.log:22:47.733007-0,EXCP,`), false},
 		{"test4", []byte(`.\rphost_2345\24011215.log:42:47.733007-0,EXCP,`), false},
+		{"test5", []byte(`.\rphost_2345\24011215.log:35:00.000001-0,EXCP,`), true},
+		{"test6", []byte(`.\rphost_2345\24011215.log:35:00.000003-0,EXCP,`), false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := filter.isTrueLineByStop(tt.data); got != tt.want {
+			if got := filter.isTrueLineByStart(tt.data); got != tt.want {
 				t.Errorf("lineFilter.isTrueLineByStop() = %v, want %v", got, tt.want)
 			}
 		})
@@ -67,8 +77,8 @@ func Test_lineFilter_isTrueLineByStart(t *testing.T) {
 func Test_lineFilter_isTrueLineByStop(t *testing.T) {
 	var filter lineFilter
 	filter.init(
-		time.Date(2024, 1, 12, 15, 30, 0, 1, time.UTC),
-		time.Date(2024, 1, 12, 15, 35, 0, 2, time.UTC),
+		time.Date(2024, 1, 12, 15, 30, 0, 1, time.Local),
+		time.Date(2024, 1, 12, 15, 35, 0, 2, time.Local),
 		stop)
 
 	tests := []struct {

@@ -44,9 +44,13 @@ func (obj *lineFilter) init(start time.Time, stop time.Time, edge edgeType) {
 
 func (obj *lineFilter) isTrueLineByStart(data []byte) bool {
 	strLineTime, strDuration := getStrTimeFromLine(data)
+	if strLineTime == nil {
+		return false
+	}
 
 	eventStopTime, _ := time.ParseInLocation("06010215.log:04:05", string(strLineTime), time.Local)
-	duration, _ := time.ParseDuration(string(strDuration) + "ns")
+	//eventStopMoment, _ := time.ParseDuration(string(strLineTime[19:]) + "us")
+	duration, _ := time.ParseDuration(string(strDuration) + "us")
 	eventStartTime := eventStopTime.Add(-1 * duration)
 
 	if eventStartTime.Compare(obj.timeBegin) == -1 ||
