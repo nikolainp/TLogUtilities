@@ -118,6 +118,7 @@ func (obj *lineChecker) processStream(sName string, sIn io.Reader, sOut io.Write
 	}
 	writeLine(prefixFirstLine, bufSlice[0])
 	bufSlice = bufSlice[1:]
+	isLastLineComplete := bytes.Equal(obj.buffer[n-1:n], []byte("\n"))
 
 	for {
 		for i := range bufSlice {
@@ -138,8 +139,16 @@ func (obj *lineChecker) processStream(sName string, sIn io.Reader, sOut io.Write
 		}
 		checkError(err)
 		bufSlice = bytes.Split(obj.buffer[:n], []byte("\n"))
+
+		if !isLastLineComplete {
+			writeLine([]byte{}, bufSlice[0])
+			bufSlice = bufSlice[1:]
+		}
+		isLastLineComplete = bytes.Equal(obj.buffer[n-1:n], []byte("\n"))
 	}
 	writeLine([]byte{}, []byte("\n"))
+	err = writer.Flush()
+	checkError(err)
 }
 
 func (obj *lineChecker) isFirstLine(data []byte) bool {
