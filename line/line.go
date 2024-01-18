@@ -7,9 +7,28 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 )
+
+var cancelChan chan bool
+
+func init() {
+	signChan := make(chan os.Signal, 10)
+	cancelChan = make(chan bool, 1)
+
+	signal.Notify(signChan, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		signal := <-signChan
+		// Run Cleanup
+		fmt.Fprintf(os.Stderr, "\ncaptured %v, stopping and exiting...\n", signal)
+		cancelChan <- true
+		//os.Exit(1)
+	}()
+}
 
 func main() {
 	var worker pathWalker
@@ -17,6 +36,21 @@ func main() {
 	worker.init()
 	for _, path := range os.Args[1:] {
 		worker.pathWalk(path)
+
+		if isCancel() {
+			break
+		}
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+func isCancel() bool {
+	select {
+	case _, ok := <-cancelChan:
+		return !ok
+	default:
+		return false
 	}
 }
 
@@ -40,6 +74,10 @@ func (obj *pathWalker) pathWalk(basePath string) {
 			return nil
 		}
 		obj.doProcess(basePath, path)
+
+		if isCancel() {
+			return fmt.Errorf("process is cancel")
+		}
 
 		return nil
 	})
@@ -102,6 +140,10 @@ func (obj *lineChecker) processStream(sName string, sIn io.Reader, sOut io.Write
 	prefixFirstLine := []byte(sName + ":")
 	prefixSecondLine := []byte("<line>")
 
+	if isCancel() {
+		return
+	}
+
 	// read first line
 	n, err := reader.Read(obj.buffer)
 	if n == 0 && err == io.EOF {
@@ -132,6 +174,10 @@ func (obj *lineChecker) processStream(sName string, sIn io.Reader, sOut io.Write
 
 		err = writer.Flush()
 		checkError(err)
+
+		if isCancel() {
+			break
+		}
 
 		n, err := reader.Read(obj.buffer)
 		if n == 0 && err == io.EOF {
