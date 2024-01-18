@@ -24,7 +24,7 @@ func init() {
 	go func() {
 		signal := <-signChan
 		// Run Cleanup
-		fmt.Fprintf(os.Stderr, "\ncaptured %v, stopping and exiting...\n", signal)
+		fmt.Fprintf(os.Stderr, "\nCaptured %v, stopping and exiting...\n", signal)
 		cancelChan <- true
 		//os.Exit(1)
 	}()
@@ -67,7 +67,7 @@ func (obj *pathWalker) init() {
 func (obj *pathWalker) pathWalk(basePath string) {
 	err := filepath.Walk(basePath, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
-			fmt.Printf("prevent panic by handling failure accessing a path %q: %v\n", path, err)
+			fmt.Fprintf(os.Stderr, "Prevent panic by handling failure accessing a path %q: %v\n", path, err)
 			return err
 		}
 		if info.IsDir() {
@@ -82,7 +82,7 @@ func (obj *pathWalker) pathWalk(basePath string) {
 		return nil
 	})
 	if err != nil {
-		fmt.Printf("error walking the path %q: %v\n", basePath, err)
+		fmt.Fprintf(os.Stderr, "Error walking the path %q: %v\n", basePath, err)
 	}
 }
 
@@ -102,7 +102,7 @@ func (obj *pathWalker) doProcess(basePath string, fileName string) {
 
 	fileStream, err := os.Open(fileName)
 	if err != nil {
-		fmt.Printf("error walking the path %q: %v\n", fileName, err)
+		fmt.Fprintf(os.Stderr, "Error open: %q: %v\n", fileName, err)
 	}
 	defer fileStream.Close()
 	obj.check.processStream(subFileName, fileStream, os.Stdout)
