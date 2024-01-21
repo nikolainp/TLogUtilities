@@ -123,7 +123,7 @@ func (obj *lineChecker) init() {
 func (obj *lineChecker) processStream(sName string, sIn io.Reader, sOut io.Writer) {
 
 	reader := bufio.NewReaderSize(sIn, obj.bufSize)
-	writer := bufio.NewWriterSize(sOut, obj.bufSize)
+	writer := bufio.NewWriterSize(sOut, obj.bufSize*2)
 
 	checkError := func(err error) {
 		if err != nil {
