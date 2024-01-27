@@ -20,11 +20,11 @@ func Test_lineFilter_init(t *testing.T) {
 		{
 			"test1",
 			args{time.Date(2024, 2, 1, 12, 30, 0, 1, time.UTC),
-				time.Date(2024, 2, 1, 12, 30, 0, 2, time.UTC), start},
+				time.Date(2024, 2, 1, 12, 30, 0, 2, time.UTC), edgeStart},
 			lineFilter{time.Date(2024, 2, 1, 12, 30, 0, 1, time.UTC),
 				time.Date(2024, 2, 1, 12, 30, 0, 2, time.UTC),
 				[]byte("24020112.log:30:00.000001"),
-				[]byte("24020112.log:30:00.000002"), start},
+				[]byte("24020112.log:30:00.000002"), edgeStart},
 		},
 	}
 	for _, tt := range tests {
@@ -43,7 +43,7 @@ func Test_lineFilter_isTrueLineByStart(t *testing.T) {
 	filter.init(
 		time.Date(2024, 1, 12, 15, 30, 0, 1000, time.Local),
 		time.Date(2024, 1, 12, 15, 35, 0, 2000, time.Local),
-		stop)
+		edgeStop)
 
 	tests := []struct {
 		name string
@@ -72,7 +72,7 @@ func Test_lineFilter_isTrueLineByStop(t *testing.T) {
 	filter.init(
 		time.Date(2024, 1, 12, 15, 30, 0, 1, time.Local),
 		time.Date(2024, 1, 12, 15, 35, 0, 2, time.Local),
-		stop)
+		edgeStop)
 
 	tests := []struct {
 		name string
@@ -125,13 +125,12 @@ func Test_getStrTimeFromLine(t *testing.T) {
 	}
 }
 
-
 func Benchmark_isTrueLineByStart(b *testing.B) {
 	var filter lineFilter
 	filter.init(
 		time.Date(2024, 1, 12, 15, 30, 0, 1, time.Local),
 		time.Date(2024, 1, 12, 15, 35, 0, 2, time.Local),
-		stop)
+		edgeStop)
 	data := []byte(`.\rphost_2345\24011215.log:32:47.733007-0,EXCP,`)
 
 	b.ResetTimer()
@@ -145,7 +144,7 @@ func Benchmark_isTrueLineByStop(b *testing.B) {
 	filter.init(
 		time.Date(2024, 1, 12, 15, 30, 0, 1, time.Local),
 		time.Date(2024, 1, 12, 15, 35, 0, 2, time.Local),
-		stop)
+		edgeStop)
 	data := []byte(`.\rphost_2345\24011215.log:32:47.733007-0,EXCP,`)
 
 	b.ResetTimer()

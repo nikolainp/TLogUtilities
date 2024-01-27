@@ -3,22 +3,37 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"time"
 )
 
 func main() {
+	var conf config
+
+	conf.init(os.Args)
+
+	switch conf.getOperation() {
+	case operationFilterByTyme:
 	// filter by time: start finish edgeType
-	// add TIMEGAP TIMEBACK events
+
+	case operationTimeGapBack:
+		// add TIMEGAP TIMEBACK events
+	}
+
 	// operations with time
 }
+
+///////////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////////////
 
 type edgeType int
 
 const (
-	start edgeType = 1
-	stop  edgeType = 2
+	edgeStart edgeType = iota
+	edgeStop  
+	edgeActiveAll
+	edgeActiveOnly 
 )
 
 type lineFilter struct {
