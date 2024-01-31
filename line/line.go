@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"strings"
 	"syscall"
 )
 
@@ -57,10 +56,12 @@ func isCancel() bool {
 ///////////////////////////////////////////////////////////////////////////////
 
 type pathWalker struct {
-	check lineChecker
+	rootPath string
+	check    lineChecker
 }
 
 func (obj *pathWalker) init() {
+	obj.rootPath, _ = os.Getwd()
 	obj.check.init()
 }
 
@@ -73,7 +74,7 @@ func (obj *pathWalker) pathWalk(basePath string) {
 		if info.IsDir() {
 			return nil
 		}
-		obj.doProcess(basePath, path)
+		obj.doProcess(path)
 
 		if isCancel() {
 			return fmt.Errorf("process is cancel")
@@ -86,16 +87,11 @@ func (obj *pathWalker) pathWalk(basePath string) {
 	}
 }
 
-func (obj *pathWalker) doProcess(basePath string, fileName string) {
+func (obj *pathWalker) doProcess(fileName string) {
 	var subFileName string
 	var err error
 
-	if strings.Compare(basePath, fileName) == 0 {
-		rootPath, _ := os.Getwd()
-		subFileName, err = filepath.Rel(rootPath, fileName)
-	} else {
-		subFileName, err = filepath.Rel(basePath, fileName)
-	}
+	subFileName, err = filepath.Rel(obj.rootPath, fileName)
 	if err != nil {
 		subFileName = fileName
 	}
