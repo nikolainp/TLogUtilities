@@ -61,7 +61,36 @@ func Test_lineFilter_isTrueLineByStart(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := filter.isTrueLineByStart(tt.data); got != tt.want {
-				t.Errorf("lineFilter.isTrueLineByStop() = %v, want %v", got, tt.want)
+				t.Errorf("lineFilter.isTrueLineByStart() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_lineFilter_isTrueLineActive(t *testing.T) {
+	var filter lineFilter
+	filter.init(
+		time.Date(2024, 1, 12, 15, 30, 0, 1000, time.Local),
+		time.Date(2024, 1, 12, 15, 35, 0, 2000, time.Local),
+		edgeStop)
+
+	tests := []struct {
+		name string
+		data []byte
+		want bool
+	}{
+		{"test1", []byte(""), false},
+		{"test2", []byte(`.\rphost_2345\24011215.log:32:47.733007-0,EXCP,`), false},
+		{"test3", []byte(`.\rphost_2345\24011215.log:22:47.733007-0,EXCP,`), false},
+		{"test4", []byte(`.\rphost_2345\24011215.log:42:47.733007-0,EXCP,`), false},
+		{"test5", []byte(`.\rphost_2345\24011215.log:35:00.300000-310000000,EXCP,`), true},
+		{"test6", []byte(`.\rphost_2345\24011215.log:35:00.000003-0,EXCP,`), false},
+		{"test7", []byte(`.\rphost_2345\24011215.log:36:00.000003-710000000,EXCP,`), true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := filter.isTrueLineActive(tt.data); got != tt.want {
+				t.Errorf("lineFilter.isTrueLineActive() = %v, want %v", got, tt.want)
 			}
 		})
 	}

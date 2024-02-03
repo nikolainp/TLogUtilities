@@ -31,9 +31,9 @@ type edgeType int
 
 const (
 	edgeStart edgeType = iota
-	edgeStop  
+	edgeStop
 	edgeActiveAll
-	edgeActiveOnly 
+	edgeActiveOnly
 )
 
 type lineFilter struct {
@@ -63,13 +63,27 @@ func (obj *lineFilter) isTrueLineByStart(data []byte) bool {
 		return false
 	}
 
-	eventStopTime, _ := time.ParseInLocation("06010215.log:04:05", string(strLineTime), time.Local)
 	//eventStopMoment, _ := time.ParseDuration(string(strLineTime[19:]) + "us")
-	duration, _ := time.ParseDuration(string(strDuration) + "us")
-	eventStartTime := eventStopTime.Add(-1 * duration)
+	eventStartTime := getStartTime(strLineTime, strDuration)
 
 	if eventStartTime.Compare(obj.timeBegin) == -1 ||
 		eventStartTime.Compare(obj.timeFinish) == 1 {
+		return false
+	}
+
+	return true
+}
+
+func (obj *lineFilter) isTrueLineActive(data []byte) bool {
+	strLineTime, strDuration := getStrTimeFromLine(data)
+	if strLineTime == nil {
+		return false
+	}
+
+	eventStartTime := getStartTime(strLineTime, strDuration)
+
+	if eventStartTime.Compare(obj.timeBegin) == 1 ||
+		bytes.Compare(strLineTime, obj.endTimeFinish) == -1 {
 		return false
 	}
 
@@ -143,6 +157,15 @@ func getStrTimeFromLine(data []byte) (time []byte, duration []byte) {
 	strDuration := data[logPositin+18 : logPositin+18+commaPosition]
 
 	return strTime, strDuration
+}
+
+func getStartTime(strLineTime []byte, strDuration []byte) time.Time {
+	stopTime, _ := time.ParseInLocation("06010215.log:04:05", string(strLineTime), time.Local)
+
+	duration, _ := time.ParseDuration(string(strDuration) + "us")
+	startTime := stopTime.Add(-1 * duration)
+
+	return startTime
 }
 
 ///////////////////////////////////////////////////////////////////////////////
