@@ -1,11 +1,31 @@
 package main
 
 import (
-	"bytes"
+	"bufio"
 	"fmt"
+	"io"
 	"os"
-	"time"
+	"os/signal"
+	"sync"
+	"syscall"
 )
+
+var cancelChan chan bool
+
+func init() {
+	signChan := make(chan os.Signal, 10)
+	cancelChan = make(chan bool, 1)
+
+	signal.Notify(signChan, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		signal := <-signChan
+		// Run Cleanup
+		fmt.Fprintf(os.Stderr, "\nCaptured %v, stopping and exiting...\n", signal)
+		cancelChan <- true
+		//os.Exit(1)
+	}()
+}
 
 func main() {
 	var conf config
@@ -25,147 +45,73 @@ func main() {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-///////////////////////////////////////////////////////////////////////////////
-
-type edgeType int
-
-const (
-	edgeStart edgeType = iota
-	edgeStop
-	edgeActiveAll
-	edgeActiveOnly
-)
-
-type lineFilter struct {
-	timeBegin, timeFinish       time.Time
-	endTimeBegin, endTimeFinish []byte
-	edge                        edgeType
-}
-
-func (obj *lineFilter) init(start time.Time, stop time.Time, edge edgeType) {
-
-	timeToFilter := func(tt time.Time) []byte {
-		return []byte(fmt.Sprintf("%02d%02d%02d%02d.log:%02d:%02d.%06d",
-			tt.Year()-2000, tt.Month(), tt.Day(), tt.Hour(),
-			tt.Minute(), tt.Second(), tt.Nanosecond()))
-	}
-
-	obj.timeBegin = start
-	obj.timeFinish = stop
-	obj.endTimeBegin = timeToFilter(start)
-	obj.endTimeFinish = timeToFilter(stop)
-	obj.edge = edge
-}
-
-func (obj *lineFilter) isTrueLineByStart(data []byte) bool {
-	strLineTime, strDuration := getStrTimeFromLine(data)
-	if strLineTime == nil {
+func isCancel() bool {
+	select {
+	case _, ok := <-cancelChan:
+		return !ok
+	default:
 		return false
 	}
-
-	//eventStopMoment, _ := time.ParseDuration(string(strLineTime[19:]) + "us")
-	eventStartTime := getStartTime(strLineTime, strDuration)
-
-	if eventStartTime.Compare(obj.timeBegin) == -1 ||
-		eventStartTime.Compare(obj.timeFinish) == 1 {
-		return false
-	}
-
-	return true
-}
-
-func (obj *lineFilter) isTrueLineActive(data []byte) bool {
-	strLineTime, strDuration := getStrTimeFromLine(data)
-	if strLineTime == nil {
-		return false
-	}
-
-	eventStartTime := getStartTime(strLineTime, strDuration)
-
-	if eventStartTime.Compare(obj.timeBegin) == 1 ||
-		bytes.Compare(strLineTime, obj.endTimeFinish) == -1 {
-		return false
-	}
-
-	return true
-}
-
-func (obj *lineFilter) isTrueLineByStop(data []byte) bool {
-	strLineTime, _ := getStrTimeFromLine(data)
-	if strLineTime == nil {
-		return false
-	}
-	if bytes.Compare(strLineTime, obj.endTimeBegin) == -1 ||
-		bytes.Compare(strLineTime, obj.endTimeFinish) == 1 {
-		return false
-	}
-	return true
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-func getStrTimeFromLine(data []byte) (time []byte, duration []byte) {
+type streamBuffer struct {
+	buf *[]byte
+	len int
+}
 
-	isNumber := func(data byte) bool {
-		if data == '0' || data == '1' || data == '2' || data == '3' ||
-			data == '4' || data == '5' || data == '6' || data == '7' ||
-			data == '8' || data == '9' {
-			return true
+type streamProcessor struct {
+	poolBuf sync.Pool
+	chBuf   chan streamBuffer
+
+	bufSize int
+}
+
+func (obj *streamProcessor) init() {
+	obj.bufSize = 1024 * 1024
+
+	obj.poolBuf = sync.Pool{New: func() interface{} {
+		lines := make([]byte, obj.bufSize)
+		return lines
+	}}
+
+	obj.chBuf = make(chan streamBuffer, 1)
+}
+
+func (obj *streamProcessor) doRead(sIn io.Reader) {
+	buf := obj.poolBuf.Get().([]byte)
+
+	reader := bufio.NewReaderSize(sIn, obj.bufSize)
+	n, err := reader.Read(buf)
+	if n == 0 && err == io.EOF {
+		return
+	}
+
+	obj.chBuf <- streamBuffer{&buf, n}
+}
+
+func (obj *streamProcessor) doWrite(sOut io.Writer) {
+
+	writer := bufio.NewWriterSize(sOut, obj.bufSize*2)
+
+	checkError := func(err error) {
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Error: ", err)
 		}
-
-		return false
+	}
+	writeLine := func(line []byte) {
+		_, err := writer.Write(line)
+		checkError(err)
 	}
 
-	logPositin := bytes.Index(data, []byte(".log:"))
-	if logPositin < 8 || len(data) < logPositin+17 {
-		return nil, nil
-	}
+	buffer := <-obj.chBuf
+	bufSlice := (*buffer.buf)[:buffer.len]
 
-	strTime := data[logPositin-8 : logPositin+17]
-	if !isNumber(strTime[0]) ||
-		!isNumber(strTime[1]) ||
-		!isNumber(strTime[2]) ||
-		!isNumber(strTime[3]) ||
-		!isNumber(strTime[4]) ||
-		!isNumber(strTime[5]) ||
-		!isNumber(strTime[6]) ||
-		!isNumber(strTime[7]) {
-		return nil, nil
-	}
-	if strTime[15] != ':' || strTime[18] != '.' {
-		return nil, nil
-	}
-	if !isNumber(strTime[13]) ||
-		!isNumber(strTime[14]) ||
-		!isNumber(strTime[16]) ||
-		!isNumber(strTime[17]) {
-		return nil, nil
-	}
-	if !isNumber(strTime[19]) ||
-		!isNumber(strTime[20]) ||
-		!isNumber(strTime[21]) ||
-		!isNumber(strTime[22]) ||
-		!isNumber(strTime[23]) ||
-		!isNumber(strTime[24]) {
-		return nil, nil
-	}
+	writeLine(bufSlice)
+	writer.Flush()
 
-	commaPosition := bytes.Index(data[logPositin+18:], []byte(","))
-	if commaPosition == -1 {
-		return nil, nil
-	}
-	strDuration := data[logPositin+18 : logPositin+18+commaPosition]
-
-	return strTime, strDuration
-}
-
-func getStartTime(strLineTime []byte, strDuration []byte) time.Time {
-	stopTime, _ := time.ParseInLocation("06010215.log:04:05", string(strLineTime), time.Local)
-
-	duration, _ := time.ParseDuration(string(strDuration) + "us")
-	startTime := stopTime.Add(-1 * duration)
-
-	return startTime
+	obj.poolBuf.Put(*buffer.buf)
 }
 
 ///////////////////////////////////////////////////////////////////////////////

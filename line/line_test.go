@@ -91,7 +91,7 @@ func Benchmark_processStream(b *testing.B) {
 	var check lineChecker
 
 	for i := 0; i < 1000; i++ {
-		bufferIn.WriteString("32:47.733013-0,EXCP,1")
+		bufferIn.WriteString("32:47.733013-0,EXCP,1\n")
 	}
 
 	streamIn := strings.NewReader(bufferIn.String())
@@ -102,6 +102,7 @@ func Benchmark_processStream(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		check.processStream("", streamIn, streamOut)
+		streamOut.Reset()
 	}
 }
 
