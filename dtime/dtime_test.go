@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"strings"
 	"testing"
@@ -19,7 +20,9 @@ func Test_streamProcessor(t *testing.T) {
 
 	var obj streamProcessor
 
-	obj.init()
+	obj.init(func (buf []byte, sOut *bufio.Writer) {
+		sOut.Write(buf)
+	})
 	for i := 0; i < 1; i++ {
 		obj.doRead(streamIn)
 		obj.doWrite(streamOut)

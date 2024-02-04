@@ -62,56 +62,66 @@ type streamBuffer struct {
 }
 
 type streamProcessor struct {
-	poolBuf sync.Pool
-	chBuf   chan streamBuffer
+	poolBuf   sync.Pool
+	chBuf     chan streamBuffer
+	processor func([]byte, *bufio.Writer)
 
 	bufSize int
 }
 
-func (obj *streamProcessor) init() {
+func (obj *streamProcessor) init(funcProcessor func([]byte, *bufio.Writer)) {
 	obj.bufSize = 1024 * 1024
 
 	obj.poolBuf = sync.Pool{New: func() interface{} {
 		lines := make([]byte, obj.bufSize)
 		return lines
 	}}
-
 	obj.chBuf = make(chan streamBuffer, 1)
+	obj.processor = funcProcessor
 }
 
 func (obj *streamProcessor) doRead(sIn io.Reader) {
 	buf := obj.poolBuf.Get().([]byte)
-
 	reader := bufio.NewReaderSize(sIn, obj.bufSize)
-	n, err := reader.Read(buf)
-	if n == 0 && err == io.EOF {
-		return
-	}
 
-	obj.chBuf <- streamBuffer{&buf, n}
+	for {
+		n, err := reader.Read(buf)
+		if n == 0 && err == io.EOF {
+			break
+		}
+
+		obj.chBuf <- streamBuffer{&buf, n}
+
+		if isCancel() {
+			break
+		}
+	}
+	close(obj.chBuf)
 }
 
 func (obj *streamProcessor) doWrite(sOut io.Writer) {
 
 	writer := bufio.NewWriterSize(sOut, obj.bufSize*2)
 
-	checkError := func(err error) {
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "Error: ", err)
+	// checkError := func(err error) {
+	// 	if err != nil {
+	// 		fmt.Fprintln(os.Stderr, "Error: ", err)
+	// 	}
+	// }
+	// writeLine := func(line []byte) {
+	// 	_, err := writer.Write(line)
+	// 	checkError(err)
+	// }
+
+	for buffer := range obj.chBuf {
+		obj.processor((*buffer.buf)[:buffer.len], writer)
+		obj.poolBuf.Put(*(buffer.buf))
+		writer.Flush()
+
+		if isCancel() {
+			break
 		}
 	}
-	writeLine := func(line []byte) {
-		_, err := writer.Write(line)
-		checkError(err)
-	}
-
-	buffer := <-obj.chBuf
-	bufSlice := (*buffer.buf)[:buffer.len]
-
-	writeLine(bufSlice)
-	writer.Flush()
-
-	obj.poolBuf.Put(*buffer.buf)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
