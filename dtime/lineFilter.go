@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"time"
 )
 
@@ -34,6 +35,10 @@ func (obj *lineFilter) init(start time.Time, stop time.Time, edge edgeType) {
 	obj.endTimeBegin = timeToFilter(start)
 	obj.endTimeFinish = timeToFilter(stop)
 	obj.edge = edge
+}
+
+func (obj *lineFilter) process([]byte, io.Writer) {
+
 }
 
 func (obj *lineFilter) isTrueLineByStart(data []byte) bool {

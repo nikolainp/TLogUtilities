@@ -35,6 +35,7 @@ func main() {
 	switch conf.getOperation() {
 	case operationFilterByTyme:
 	// filter by time: start finish edgeType
+		
 
 	case operationTimeGapBack:
 		// add TIMEGAP TIMEBACK events
@@ -64,12 +65,12 @@ type streamBuffer struct {
 type streamProcessor struct {
 	poolBuf   sync.Pool
 	chBuf     chan streamBuffer
-	processor func([]byte, *bufio.Writer)
+	processor func([]byte, io.Writer)
 
 	bufSize int
 }
 
-func (obj *streamProcessor) init(funcProcessor func([]byte, *bufio.Writer)) {
+func (obj *streamProcessor) init(funcProcessor func([]byte, io.Writer)) {
 	obj.bufSize = 1024 * 1024
 
 	obj.poolBuf = sync.Pool{New: func() interface{} {
