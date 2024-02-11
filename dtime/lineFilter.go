@@ -20,6 +20,8 @@ type lineFilter struct {
 	timeBegin, timeFinish       time.Time
 	endTimeBegin, endTimeFinish []byte
 	edge                        edgeType
+
+	filter func([]byte) bool
 }
 
 func (obj *lineFilter) init(start time.Time, stop time.Time, edge edgeType) {
@@ -35,10 +37,24 @@ func (obj *lineFilter) init(start time.Time, stop time.Time, edge edgeType) {
 	obj.endTimeBegin = timeToFilter(start)
 	obj.endTimeFinish = timeToFilter(stop)
 	obj.edge = edge
+
+	switch edge {
+	case edgeStart:
+		obj.filter = obj.isTrueLineByStart
+	case edgeStop:
+		obj.filter = obj.isTrueLineByStop
+	case edgeActiveAll:
+		obj.filter = obj.isTrueLineInvolve
+	case edgeActiveOnly:
+		obj.filter = obj.isTrueLineActive
+	}
 }
 
-func (obj *lineFilter) process([]byte, io.Writer) {
-
+func (obj *lineFilter) process(data []byte, sOut io.Writer) {
+	if obj.filter(data) {
+		sOut.Write(data)
+		sOut.Write([]byte("\n"))
+	}
 }
 
 func (obj *lineFilter) isTrueLineByStart(data []byte) bool {
@@ -84,6 +100,12 @@ func (obj *lineFilter) isTrueLineByStop(data []byte) bool {
 		return false
 	}
 	return true
+}
+
+func (obj *lineFilter) isTrueLineInvolve(data []byte) bool {
+	return obj.isTrueLineByStop(data) ||
+		obj.isTrueLineByStart(data) ||
+		obj.isTrueLineActive(data)
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -31,11 +32,19 @@ func main() {
 	var conf config
 
 	conf.init(os.Args)
+	run(conf, os.Stdin, os.Stdout)
+}
+
+func run(conf config, sIn io.Reader, sOut io.Writer) {
+	var stream streamProcessor
 
 	switch conf.getOperation() {
 	case operationFilterByTyme:
-	// filter by time: start finish edgeType
-		
+		// filter by time: start finish edgeType
+		filter := new(lineFilter)
+		filter.init(conf.filterBeginTime, conf.filterFinishTime, conf.filterEdge)
+		stream.init(filter.process)
+		stream.run(sIn, sOut)
 
 	case operationTimeGapBack:
 		// add TIMEGAP TIMEBACK events
@@ -81,6 +90,23 @@ func (obj *streamProcessor) init(funcProcessor func([]byte, io.Writer)) {
 	obj.processor = funcProcessor
 }
 
+func (obj *streamProcessor) run(sIn io.Reader, sOut io.Writer) {
+	var wg sync.WaitGroup
+
+	goFunc := func(work func()) {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			work()
+		}()
+	}
+
+	goFunc(func() { obj.doRead(sIn) })
+	goFunc(func() { obj.doWrite(sOut) })
+
+	wg.Wait()
+}
+
 func (obj *streamProcessor) doRead(sIn io.Reader) {
 	buf := obj.poolBuf.Get().([]byte)
 	reader := bufio.NewReaderSize(sIn, obj.bufSize)
@@ -115,7 +141,11 @@ func (obj *streamProcessor) doWrite(sOut io.Writer) {
 	// }
 
 	for buffer := range obj.chBuf {
-		obj.processor((*buffer.buf)[:buffer.len], writer)
+
+		for _, buf := range bytes.Split((*buffer.buf)[:buffer.len], []byte("\n")) {
+			obj.processor(buf, writer)
+		}
+
 		obj.poolBuf.Put(*(buffer.buf))
 		writer.Flush()
 

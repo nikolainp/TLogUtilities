@@ -24,13 +24,14 @@ func Test_lineFilter_init(t *testing.T) {
 			lineFilter{time.Date(2024, 2, 1, 12, 30, 0, 1, time.UTC),
 				time.Date(2024, 2, 1, 12, 30, 0, 2, time.UTC),
 				[]byte("24020112.log:30:00.000001"),
-				[]byte("24020112.log:30:00.000002"), edgeStart},
+				[]byte("24020112.log:30:00.000002"), edgeStart, nil},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var got lineFilter
 			got.init(tt.args.start, tt.args.stop, tt.args.edge)
+			got.filter = nil
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("GetFileSearcher() = %v, want %v", got, tt.want)
 			}
