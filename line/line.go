@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"flag"
 	"fmt"
 	"io"
 	"io/fs"
@@ -37,15 +38,26 @@ func init() {
 }
 
 func main() {
+	var printVersion, stripOutput bool
 	var worker pathWalker
 
-	if len(os.Args) == 2 && os.Args[1] == "-v" {
-		fmt.Printf("Vesion: %s (%s)\n", version, date)
-		os.Exit(0)
+	fs := flag.NewFlagSet("", flag.ContinueOnError)
+	fs.BoolVar(&printVersion, "v", false, "print version")
+	fs.BoolVar(&stripOutput, "s", false, "without filename in line")
+
+	if err := fs.Parse(os.Args[1:]); err != nil {
+		fmt.Fprintf(fs.Output(), "Usage of %s:\n", os.Args[0])
+		fs.PrintDefaults()
+		return
 	}
 
-	worker.init()
-	for _, path := range os.Args[1:] {
+	if printVersion {
+		fmt.Printf("Vesion: %s (%s)\n", version, date)
+		return
+	}
+
+	worker.init(!stripOutput)
+	for _, path := range fs.Args() {
 		worker.pathWalk(path)
 
 		if isCancel() {
@@ -70,11 +82,15 @@ func isCancel() bool {
 type pathWalker struct {
 	rootPath string
 	check    lineChecker
+
+	isNeedPrefix bool
 }
 
-func (obj *pathWalker) init() {
+func (obj *pathWalker) init(isNeedPrefix bool) {
 	obj.rootPath, _ = os.Getwd()
 	obj.check.init()
+
+	obj.isNeedPrefix = isNeedPrefix
 }
 
 func (obj *pathWalker) pathWalk(basePath string) {
@@ -103,9 +119,11 @@ func (obj *pathWalker) doProcess(fileName string) {
 	var subFileName string
 	var err error
 
-	subFileName, err = filepath.Rel(obj.rootPath, fileName)
-	if err != nil {
-		subFileName = fileName
+	if obj.isNeedPrefix {
+		subFileName, err = filepath.Rel(obj.rootPath, fileName)
+		if err != nil {
+			subFileName = fileName
+		}
 	}
 
 	fileStream, err := os.Open(fileName)
@@ -144,8 +162,14 @@ func (obj *lineChecker) processStream(sName string, sIn io.Reader, sOut io.Write
 		_, err = writer.Write(line)
 		checkError(err)
 	}
+	getPrefix := func(prefix string) string {
+		if len(prefix) == 0 {
+			return ""
+		}
+		return prefix + ":"
+	}
 
-	prefixFirstLine := []byte(sName + ":")
+	prefixFirstLine := []byte(getPrefix(sName))
 	prefixSecondLine := []byte("<line>")
 
 	if isCancel() {
