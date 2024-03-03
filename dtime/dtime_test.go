@@ -79,24 +79,195 @@ func Test_run(t *testing.T) {
 }
 
 func Test_streamProcessor_run(t *testing.T) {
-	type args struct {
-		sIn io.Reader
-	}
 	tests := []struct {
-		name     string
-		obj      *streamProcessor
-		args     args
-		wantSOut string
+		name string
+		sIn  string
+		sOut string
 	}{
-		// TODO: Add test cases.
+		{"test 1", "", ""},
+		{"test 2",
+			`0
+01
+012
+0123
+01234
+012345
+0123456
+01234567
+012345678
+0123456789
+0123456789a
+0123456789ab
+0123456789abc
+0123456789abcd
+0123456789abcde
+0123456789abcdef
+0123456789abcdefg`,
+			`0
+01
+012
+0123
+01234
+012345
+0123456
+01234567
+012345678
+0123456789
+0123456789a
+0123456789ab
+0123456789abc
+0123456789abcd
+0123456789abcde
+0123456789abcdef
+0123456789abcdefg
+`,
+		},
+		{"test 3",
+			`0
+01
+012
+0123
+01234
+012345
+0123456
+01234567
+012345678
+0123456789
+0123456789a
+0123456789ab
+0123456789abc
+0123456789abcd
+0123456789abcde
+0123456789abcdef
+0123456789abcdefg
+`,
+			`0
+01
+012
+0123
+01234
+012345
+0123456
+01234567
+012345678
+0123456789
+0123456789a
+0123456789ab
+0123456789abc
+0123456789abcd
+0123456789abcde
+0123456789abcdef
+0123456789abcdefg
+`,
+		},
+		{"test 4",
+			`0123456789abcdefg
+0123456789abcdef
+0123456789abcde
+0123456789abcd
+0123456789abc
+0123456789ab
+0123456789a
+0123456789
+012345678
+01234567
+0123456
+012345
+01234
+0123
+012
+01
+0
+`,
+			`0123456789abcdefg
+0123456789abcdef
+0123456789abcde
+0123456789abcd
+0123456789abc
+0123456789ab
+0123456789a
+0123456789
+012345678
+01234567
+0123456
+012345
+01234
+0123
+012
+01
+0
+`,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			var obj streamProcessor
+
 			sOut := &bytes.Buffer{}
-			tt.obj.run(tt.args.sIn, sOut)
-			if gotSOut := sOut.String(); gotSOut != tt.wantSOut {
-				t.Errorf("streamProcessor.run() = %v, want %v", gotSOut, tt.wantSOut)
+			obj.init(func(buf []byte, sOut io.Writer) {
+				if len(buf) == 0 {
+					return
+				}
+				sOut.Write(buf)
+				sOut.Write([]byte("\n"))
+			})
+			obj.bufSize = 5
+
+			obj.run(strings.NewReader(tt.sIn), sOut)
+			gotSOut := sOut.String()
+			if gotSOut != tt.sOut {
+				t.Errorf("streamProcessor.run() = %v, want %v", gotSOut, tt.sIn)
 			}
 		})
+	}
+}
+
+func Benchmark_Test_doRead(b *testing.B) {
+	// file, err := os.Open("c:\\temp\\temp.excp.txt")
+	// if err != nil {
+	// 	return
+	// }
+
+	// var obj streamProcessor
+	// obj.init(func(buf []byte, sOut io.Writer) {
+	// 	if len(buf) == 0 {
+	// 		return
+	// 	}
+	// 	sOut.Write(buf)
+	// 	sOut.Write([]byte("\n"))
+	// })
+	// obj.bufSize = 30
+	// obj.run(file, os.Stdout)
+
+	strIn := `0
+01
+012
+0123
+01234
+012345
+0123456
+01234567
+012345678
+0123456789
+0123456789a
+0123456789ab
+0123456789abc
+0123456789abcd
+0123456789abcde
+0123456789abcdef
+0123456789abcdefg
+`
+
+	var obj streamProcessor
+
+	sIn := strings.NewReader(strIn)
+	sOut := &bytes.Buffer{}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		obj.init(func(buf []byte, sOut io.Writer) {})
+		obj.bufSize = 5
+		obj.run(sIn, sOut)
+		sIn.Reset(strIn)
 	}
 }

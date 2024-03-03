@@ -51,6 +51,7 @@ func (obj *lineFilter) init(start time.Time, stop time.Time, edge edgeType) {
 }
 
 func (obj *lineFilter) process(data []byte, sOut io.Writer) {
+
 	if obj.filter(data) {
 		sOut.Write(data)
 		sOut.Write([]byte("\n"))
@@ -123,7 +124,7 @@ func getStrTimeFromLine(data []byte) (time []byte, duration []byte) {
 	}
 
 	logPositin := bytes.Index(data, []byte(".log:"))
-	if logPositin < 8 || len(data) < logPositin+17 {
+	if logPositin < 8 || len(data) < logPositin+18 {
 		return nil, nil
 	}
 

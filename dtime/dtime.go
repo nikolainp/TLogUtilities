@@ -11,6 +11,12 @@ import (
 	"syscall"
 )
 
+var (
+	version = "dev"
+	//commit  = "none"
+	date = "unknown"
+)
+
 var cancelChan chan bool
 
 func init() {
@@ -24,14 +30,15 @@ func init() {
 		// Run Cleanup
 		fmt.Fprintf(os.Stderr, "\nCaptured %v, stopping and exiting...\n", signal)
 		cancelChan <- true
-		//os.Exit(1)
+		close(cancelChan)
+		os.Exit(0)
 	}()
 }
 
 func main() {
 	var conf config
 
-	conf.init(os.Args)
+	conf.init(os.Args, version, date)
 	run(conf, os.Stdin, os.Stdout)
 }
 
@@ -67,7 +74,7 @@ func isCancel() bool {
 ///////////////////////////////////////////////////////////////////////////////
 
 type streamBuffer struct {
-	buf *[]byte
+	buf []byte
 	len int
 }
 
@@ -108,16 +115,35 @@ func (obj *streamProcessor) run(sIn io.Reader, sOut io.Writer) {
 }
 
 func (obj *streamProcessor) doRead(sIn io.Reader) {
-	buf := obj.poolBuf.Get().([]byte)
+	var lastLineIndex, nextLineIndex int
+
 	reader := bufio.NewReaderSize(sIn, obj.bufSize)
 
+	buf := obj.poolBuf.Get().([]byte)
 	for {
-		n, err := reader.Read(buf)
+		n, err := reader.Read(buf[nextLineIndex:])
+		n += nextLineIndex
 		if n == 0 && err == io.EOF {
 			break
 		}
 
-		obj.chBuf <- streamBuffer{&buf, n}
+		newBuf := obj.poolBuf.Get().([]byte)
+		lastLineIndex = bytes.LastIndexByte(buf[:n], '\n')
+		if lastLineIndex == -1 {
+			nextUntillNewLine, err := reader.ReadBytes('\n') //read entire line
+			if err != nil && err != io.EOF {
+				break
+			}
+			buf = append(buf[:n], nextUntillNewLine...)
+			nextLineIndex = 0
+			n += len(nextUntillNewLine)
+		} else {
+			copy(newBuf, buf[lastLineIndex+1:n])
+			nextLineIndex = n - lastLineIndex - 1
+			n = lastLineIndex
+		}
+		obj.chBuf <- streamBuffer{buf, n}
+		buf = newBuf
 
 		if isCancel() {
 			break
@@ -130,23 +156,13 @@ func (obj *streamProcessor) doWrite(sOut io.Writer) {
 
 	writer := bufio.NewWriterSize(sOut, obj.bufSize*2)
 
-	// checkError := func(err error) {
-	// 	if err != nil {
-	// 		fmt.Fprintln(os.Stderr, "Error: ", err)
-	// 	}
-	// }
-	// writeLine := func(line []byte) {
-	// 	_, err := writer.Write(line)
-	// 	checkError(err)
-	// }
-
 	for buffer := range obj.chBuf {
 
-		for _, buf := range bytes.Split((*buffer.buf)[:buffer.len], []byte("\n")) {
+		for _, buf := range bytes.Split(buffer.buf[:buffer.len], []byte("\n")) {
 			obj.processor(buf, writer)
 		}
 
-		obj.poolBuf.Put(*(buffer.buf))
+		obj.poolBuf.Put(buffer.buf)
 		writer.Flush()
 
 		if isCancel() {

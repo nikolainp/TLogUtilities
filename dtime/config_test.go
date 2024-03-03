@@ -15,6 +15,7 @@ func Test_config_init(t *testing.T) {
 	}{
 		{"test 1", []string{"programname"}, config{
 			programName: "programname",
+			build:       buidInformation{version: "version", date: "date"},
 			operation:   operationTimeGapBack,
 		}, false},
 		{
@@ -22,6 +23,7 @@ func Test_config_init(t *testing.T) {
 			[]string{"programname", "2024.01.20_12:33:44", "2024.01.20_13:33:44"},
 			config{
 				programName:      "programname",
+				build:            buidInformation{version: "version", date: "date"},
 				operation:        operationFilterByTyme,
 				filterBeginTime:  time.Date(2024, 1, 20, 12, 33, 44, 0, time.Local),
 				filterFinishTime: time.Date(2024, 1, 20, 13, 33, 44, 0, time.Local),
@@ -33,6 +35,7 @@ func Test_config_init(t *testing.T) {
 			[]string{"programname", "2024.01.20_12:33:44.012345", "2024.01.20_13:33:44.543210"},
 			config{
 				programName:      "programname",
+				build:            buidInformation{version: "version", date: "date"},
 				operation:        operationFilterByTyme,
 				filterBeginTime:  time.Date(2024, 1, 20, 12, 33, 44, 12345000, time.Local),
 				filterFinishTime: time.Date(2024, 1, 20, 13, 33, 44, 543210000, time.Local),
@@ -44,6 +47,7 @@ func Test_config_init(t *testing.T) {
 			[]string{"programname", "2024.01#20_12:33:44.012345", "2024.01.20_13:33:44.543210"},
 			config{
 				programName: "programname",
+				build:       buidInformation{version: "version", date: "date"},
 				operation:   operationFilterByTyme,
 			},
 			true},
@@ -52,7 +56,7 @@ func Test_config_init(t *testing.T) {
 		var got config
 
 		t.Run(tt.name, func(t *testing.T) {
-			err := got.init(tt.args)
+			err := got.init(tt.args, "version", "date")
 			if !reflect.DeepEqual(got, tt.obj) {
 				t.Errorf("config.init() = %v, want %v", got, tt.obj)
 			}

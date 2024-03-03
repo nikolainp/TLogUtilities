@@ -12,6 +12,12 @@ import (
 	"syscall"
 )
 
+var (
+	version = "dev"
+	//	commit  = "none"
+	date = "unknown"
+)
+
 var cancelChan chan bool
 
 func init() {
@@ -25,12 +31,18 @@ func init() {
 		// Run Cleanup
 		fmt.Fprintf(os.Stderr, "\nCaptured %v, stopping and exiting...\n", signal)
 		cancelChan <- true
-		//os.Exit(1)
+		close(cancelChan)
+		os.Exit(0)
 	}()
 }
 
 func main() {
 	var worker pathWalker
+
+	if len(os.Args) == 2 && os.Args[1] == "-v" {
+		fmt.Printf("Vesion: %s (%s)\n", version, date)
+		os.Exit(0)
+	}
 
 	worker.init()
 	for _, path := range os.Args[1:] {

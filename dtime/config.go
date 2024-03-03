@@ -12,18 +12,29 @@ const (
 	operationTimeGapBack
 )
 
+type buidInformation struct {
+	version string
+//	commit  string
+	date    string
+}
+
 type config struct {
 	programName string
-	operation   operationType
+	build        buidInformation
+
+	operation operationType
 
 	filterBeginTime  time.Time
 	filterFinishTime time.Time
 	filterEdge       edgeType
 }
 
-func (obj *config) init(args []string) (err error) {
+func (obj *config) init(args []string, version, date string) (err error) {
 
 	obj.programName = args[0]
+	obj.build.version = version
+//	obj.build.commit = commit
+	obj.build.date = date
 	obj.operation = operationNone
 
 	getFilterTime := func(data string) (time.Time, error) {
