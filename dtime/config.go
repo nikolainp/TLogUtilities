@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -14,13 +15,13 @@ const (
 
 type buidInformation struct {
 	version string
-//	commit  string
-	date    string
+	//	commit  string
+	date string
 }
 
 type config struct {
 	programName string
-	build        buidInformation
+	build       buidInformation
 
 	operation operationType
 
@@ -33,7 +34,7 @@ func (obj *config) init(args []string, version, date string) (err error) {
 
 	obj.programName = args[0]
 	obj.build.version = version
-//	obj.build.commit = commit
+	//	obj.build.commit = commit
 	obj.build.date = date
 	obj.operation = operationNone
 
@@ -45,6 +46,10 @@ func (obj *config) init(args []string, version, date string) (err error) {
 	switch len(args) {
 	case 1:
 		obj.operation = operationTimeGapBack
+	case 2:
+		if args[1] == "-v" {
+			fmt.Printf("Vesion: %s (%s)\n", obj.build.version, obj.build.date)
+		}
 	case 3:
 		obj.operation = operationFilterByTyme
 

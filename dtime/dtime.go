@@ -38,7 +38,10 @@ func init() {
 func main() {
 	var conf config
 
-	conf.init(os.Args, version, date)
+	if err := conf.init(os.Args, version, date); err != nil {
+		fmt.Fprintf(os.Stderr, "Config error: %v\n", err)
+		return
+	}
 	run(conf, os.Stdin, os.Stdout)
 }
 
