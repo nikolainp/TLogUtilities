@@ -52,7 +52,7 @@ func main() {
 	}
 
 	if printVersion {
-		fmt.Printf("Vesion: %s (%s)\n", version, date)
+		fmt.Printf("Version: %s (%s)\n", version, date)
 		return
 	}
 
