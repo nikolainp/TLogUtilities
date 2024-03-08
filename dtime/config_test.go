@@ -31,6 +31,30 @@ func Test_config_init(t *testing.T) {
 			},
 			false},
 		{
+			"test 2 1",
+			[]string{"programname", "24012012.log:33:44.012345-44000000"},
+			config{
+				programName:      "programname",
+				build:            buidInformation{version: "version", date: "date"},
+				operation:        operationFilterByTyme,
+				filterBeginTime:  time.Date(2024, 1, 20, 12, 33, 00, 12345000, time.Local),
+				filterFinishTime: time.Date(2024, 1, 20, 12, 33, 44, 12345000, time.Local),
+				filterEdge:       edgeStop,
+			},
+			false},
+		{
+			"test 2 2",
+			[]string{"programname", "24012012.log:33:44.012345-44000000", "start"},
+			config{
+				programName:      "programname",
+				build:            buidInformation{version: "version", date: "date"},
+				operation:        operationFilterByTyme,
+				filterBeginTime:  time.Date(2024, 1, 20, 12, 33, 00, 12345000, time.Local),
+				filterFinishTime: time.Date(2024, 1, 20, 12, 33, 44, 12345000, time.Local),
+				filterEdge:       edgeStart,
+			},
+			false},
+		{
 			"test 3",
 			[]string{"programname", "2024.01.20_12:33:44.012345", "2024.01.20_13:33:44.543210"},
 			config{
@@ -40,6 +64,30 @@ func Test_config_init(t *testing.T) {
 				filterBeginTime:  time.Date(2024, 1, 20, 12, 33, 44, 12345000, time.Local),
 				filterFinishTime: time.Date(2024, 1, 20, 13, 33, 44, 543210000, time.Local),
 				filterEdge:       edgeStop,
+			},
+			false},
+		{
+			"test 3 1",
+			[]string{"programname", "2024.01.20_12:33:44.012345", "2024.01.20_13:33:44.543210", "start"},
+			config{
+				programName:      "programname",
+				build:            buidInformation{version: "version", date: "date"},
+				operation:        operationFilterByTyme,
+				filterBeginTime:  time.Date(2024, 1, 20, 12, 33, 44, 12345000, time.Local),
+				filterFinishTime: time.Date(2024, 1, 20, 13, 33, 44, 543210000, time.Local),
+				filterEdge:       edgeStart,
+			},
+			false},
+		{
+			"test 3 1",
+			[]string{"programname", "2024.01.20_12:33:44.012345", "2024.01.20_13:33:44.543210", "start"},
+			config{
+				programName:      "programname",
+				build:            buidInformation{version: "version", date: "date"},
+				operation:        operationFilterByTyme,
+				filterBeginTime:  time.Date(2024, 1, 20, 12, 33, 44, 12345000, time.Local),
+				filterFinishTime: time.Date(2024, 1, 20, 13, 33, 44, 543210000, time.Local),
+				filterEdge:       edgeStart,
 			},
 			false},
 		{

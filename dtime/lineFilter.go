@@ -10,7 +10,8 @@ import (
 type edgeType int
 
 const (
-	edgeStart edgeType = iota
+	edgeNone edgeType = iota
+	edgeStart
 	edgeStop
 	edgeActiveAll
 	edgeActiveOnly
@@ -166,8 +167,14 @@ func getStrTimeFromLine(data []byte) (time []byte, duration []byte) {
 	return strTime, strDuration
 }
 
-func getStartTime(strLineTime []byte, strDuration []byte) time.Time {
+func getTime(strLineTime []byte) time.Time {
 	stopTime, _ := time.ParseInLocation("06010215.log:04:05", string(strLineTime), time.Local)
+
+	return stopTime
+}
+
+func getStartTime(strLineTime []byte, strDuration []byte) time.Time {
+	stopTime := getTime(strLineTime)
 
 	duration, _ := time.ParseDuration(string(strDuration) + "us")
 	startTime := stopTime.Add(-1 * duration)

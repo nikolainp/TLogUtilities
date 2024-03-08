@@ -42,6 +42,27 @@ func (obj *config) init(args []string, version, date string) (err error) {
 		time, err := time.ParseInLocation("2006.01.02_15:04:05", string(data), time.Local)
 		return time, err
 	}
+	getFilterTimes := func(data string) (time.Time, time.Time, error) {
+		strTime, strDuration := getStrTimeFromLine([]byte(data + ","))
+		if strTime == nil || strDuration == nil {
+			return time.Now(), time.Now(), fmt.Errorf("error: %s", data)
+		}
+
+		return getStartTime(strTime, strDuration), getTime(strTime), nil
+	}
+	getEdgeType := func(data string) edgeType {
+		switch data {
+		case "start":
+			return edgeStart
+		case "stop":
+			return edgeStop
+		case "inner":
+			return edgeActiveOnly
+		case "outter":
+			return edgeActiveAll
+		}
+		return edgeNone
+	}
 
 	switch len(args) {
 	case 1:
@@ -49,19 +70,34 @@ func (obj *config) init(args []string, version, date string) (err error) {
 	case 2:
 		if args[1] == "-v" {
 			fmt.Printf("Version: %s (%s)\n", obj.build.version, obj.build.date)
+			return nil
 		}
-	case 3:
+
 		obj.operation = operationFilterByTyme
 
-		obj.filterBeginTime, err = getFilterTime(args[1])
-		if err != nil {
-			return err
-		}
-		obj.filterFinishTime, err = getFilterTime(args[2])
-		if err != nil {
+		if obj.filterBeginTime, obj.filterFinishTime, err = getFilterTimes(args[1]); err != nil {
 			return err
 		}
 		obj.filterEdge = edgeStop
+	case 3:
+		obj.operation = operationFilterByTyme
+
+		obj.filterEdge = getEdgeType(args[2])
+		if obj.filterEdge == edgeNone {
+			obj.filterBeginTime, err = getFilterTime(args[1])
+			if err != nil {
+				return err
+			}
+			obj.filterFinishTime, err = getFilterTime(args[2])
+			if err != nil {
+				return err
+			}
+			obj.filterEdge = edgeStop
+		} else {
+			if obj.filterBeginTime, obj.filterFinishTime, err = getFilterTimes(args[1]); err != nil {
+				return err
+			}
+		}
 	case 4:
 		obj.operation = operationFilterByTyme
 
@@ -73,14 +109,7 @@ func (obj *config) init(args []string, version, date string) (err error) {
 		if err != nil {
 			return err
 		}
-		switch args[3] {
-		case "start":
-			obj.filterEdge = edgeStart
-		case "stop":
-			obj.filterEdge = edgeStop
-		default:
-			obj.filterEdge = edgeStart
-		}
+		obj.filterEdge = getEdgeType(args[3])
 	}
 
 	return nil
