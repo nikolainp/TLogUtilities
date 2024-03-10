@@ -141,6 +141,9 @@ func (obj *streamProcessor) doRead(sIn io.Reader) {
 			nextLineIndex = 0
 			n += len(nextUntillNewLine)
 		} else {
+			if len(newBuf) < len(buf) {
+				newBuf = make([]byte, len(buf))
+			}
 			copy(newBuf, buf[lastLineIndex+1:n])
 			nextLineIndex = n - lastLineIndex - 1
 			n = lastLineIndex

@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"io"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -223,22 +224,24 @@ func Test_streamProcessor_run(t *testing.T) {
 }
 
 func Benchmark_Test_doRead(b *testing.B) {
-	// file, err := os.Open("c:\\temp\\temp.excp.txt")
-	// if err != nil {
-	// 	return
-	// }
+	file, err := os.Open("c:\\temp\\tj.out.txt")
+	if err != nil {
+		return
+	}
 
-	// var obj streamProcessor
-	// obj.init(func(buf []byte, sOut io.Writer) {
-	// 	if len(buf) == 0 {
-	// 		return
-	// 	}
-	// 	sOut.Write(buf)
-	// 	sOut.Write([]byte("\n"))
-	// })
-	// obj.bufSize = 30
-	// obj.run(file, os.Stdout)
+	var obj streamProcessor
+	obj.init(func(buf []byte, sOut io.Writer) {
+		if len(buf) == 0 {
+			return
+		}
+		// sOut.Write(buf)
+		// sOut.Write([]byte("\n"))
+	})
+	obj.bufSize = 30
+	obj.run(file, os.Stdout)
+}
 
+func Benchmark_doRead(b *testing.B) {
 	strIn := `0
 01
 012
