@@ -155,6 +155,7 @@ func (obj *streamProcessor) doRead(sIn io.Reader) {
 			break
 		}
 	}
+	
 	close(obj.chBuf)
 }
 
