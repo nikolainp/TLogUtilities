@@ -43,6 +43,18 @@ func Test_config_init(t *testing.T) {
 			},
 			false},
 		{
+			"test 2 11",
+			[]string{"programname", "24022006.log:47:11.180041-171938"},
+			config{
+				programName:      "programname",
+				build:            buidInformation{version: "version", date: "date"},
+				operation:        operationFilterByTyme,
+				filterBeginTime:  time.Date(2024, 2, 20, 6, 47, 11, 8103000, time.Local),
+				filterFinishTime: time.Date(2024, 2, 20, 6, 47, 11, 180041000, time.Local),
+				filterEdge:       edgeStop,
+			},
+			false},
+		{
 			"test 2 2",
 			[]string{"programname", "24012012.log:33:44.012345-44000000", "start"},
 			config{

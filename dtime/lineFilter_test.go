@@ -18,13 +18,22 @@ func Test_lineFilter_init(t *testing.T) {
 		want lineFilter
 	}{
 		{
-			"test1",
-			args{time.Date(2024, 2, 1, 12, 30, 0, 1, time.UTC),
-				time.Date(2024, 2, 1, 12, 30, 0, 2, time.UTC), edgeStart},
-			lineFilter{time.Date(2024, 2, 1, 12, 30, 0, 1, time.UTC),
-				time.Date(2024, 2, 1, 12, 30, 0, 2, time.UTC),
+			"test 1",
+			args{time.Date(2024, 2, 1, 12, 30, 0, 1000, time.UTC),
+				time.Date(2024, 2, 1, 12, 30, 0, 2000, time.UTC), edgeStart},
+			lineFilter{time.Date(2024, 2, 1, 12, 30, 0, 1000, time.UTC),
+				time.Date(2024, 2, 1, 12, 30, 0, 2000, time.UTC),
 				[]byte("24020112.log:30:00.000001"),
 				[]byte("24020112.log:30:00.000002"), edgeStart, nil},
+		},
+		{
+			"test 2",
+			args{time.Date(2024, 2, 20, 6, 47, 11, 8103000, time.Local),
+				time.Date(2024, 2, 20, 6, 47, 11, 180041000, time.Local), edgeStart},
+			lineFilter{time.Date(2024, 2, 20, 6, 47, 11, 8103000, time.Local),
+				time.Date(2024, 2, 20, 6, 47, 11, 180041000, time.Local),
+				[]byte("24022006.log:47:11.008103"),
+				[]byte("24022006.log:47:11.180041"), edgeStart, nil},
 		},
 	}
 	for _, tt := range tests {

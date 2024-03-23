@@ -28,9 +28,11 @@ type lineFilter struct {
 func (obj *lineFilter) init(start time.Time, stop time.Time, edge edgeType) {
 
 	timeToFilter := func(tt time.Time) []byte {
+		millisecond := tt.Nanosecond() / 1000
+
 		return []byte(fmt.Sprintf("%02d%02d%02d%02d.log:%02d:%02d.%06d",
 			tt.Year()-2000, tt.Month(), tt.Day(), tt.Hour(),
-			tt.Minute(), tt.Second(), tt.Nanosecond()))
+			tt.Minute(), tt.Second(), millisecond))
 	}
 
 	obj.timeBegin = start
