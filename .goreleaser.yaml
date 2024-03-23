@@ -34,9 +34,9 @@ builds:
       - windows
       - darwin
 
-  - id: "tcp"
-    main: ./tcp
-    binary: tcp
+  - id: "cpt"
+    main: ./cpt
+    binary: cpt
     env:
       - CGO_ENABLED=0
     goos:
