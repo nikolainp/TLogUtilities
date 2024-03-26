@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"time"
 )
 
@@ -70,6 +71,7 @@ func (obj *config) init(args []string, version, date string) (err error) {
 	case 2:
 		if args[1] == "-v" {
 			fmt.Printf("Version: %s (%s)\n", obj.build.version, obj.build.date)
+			os.Exit(0)
 			return nil
 		}
 
