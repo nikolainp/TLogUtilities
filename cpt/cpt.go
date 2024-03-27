@@ -23,9 +23,10 @@ const (
 func main() {
 	conf := getConfig(os.Args)
 
-	var pw fileProcessor
-	pw.init()
-	pw.pathWalk(conf.sourceFolder)
+	var fp fileProcessor
+	fp.init(conf.sourceFolder, conf.destinationFolder)
+
+	pathWalk(conf.sourceFolder, fp)
 }
 
 func getConfig(args []string) (conf config) {
@@ -43,15 +44,7 @@ func getConfig(args []string) (conf config) {
 	return conf
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
-type fileProcessor struct {
-}
-
-func (obj *fileProcessor) init() {
-}
-
-func (obj *fileProcessor) pathWalk(basePath string) {
+func pathWalk(basePath string, fp fileProcessor) {
 	err := filepath.Walk(basePath, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Prevent panic by handling failure accessing a path %q: %v\n", path, err)
@@ -60,7 +53,7 @@ func (obj *fileProcessor) pathWalk(basePath string) {
 		if info.IsDir() {
 			return nil
 		}
-		obj.doProcess(path)
+		fp.doProcess(path)
 
 		// if isCancel() {
 		// 	return fmt.Errorf("process is cancel")
@@ -73,7 +66,31 @@ func (obj *fileProcessor) pathWalk(basePath string) {
 	}
 }
 
+///////////////////////////////////////////////////////////////////////////////
+
+type fileProcessor struct {
+	source      string
+	destination string
+}
+
+func (obj *fileProcessor) init(source, destination string) {
+	obj.source = source
+	obj.destination = destination
+}
+
 func (obj *fileProcessor) doProcess(fileName string) {
+
+	getSubFilePath := func(path string) string {
+		dir, file := filepath.Split(path)
+		base := filepath.Base(dir)
+		return filepath.Join(base, file)
+	}
+
+	subFilePath := getSubFilePath(fileName)
+
+	fmt.Printf("mv %s %s\n", fileName,
+		filepath.Join(obj.destination, subFilePath))
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////
