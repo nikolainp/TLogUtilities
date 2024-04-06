@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -24,7 +25,7 @@ func main() {
 	conf := getConfig(os.Args)
 
 	var fp fileProcessor
-	fp.init(conf.sourceFolder, conf.destinationFolder)
+	fp.init(conf.sourceFolder, conf.destinationFolder, conf.transferType)
 
 	pathWalk(conf.sourceFolder, fp)
 }
@@ -71,14 +72,19 @@ func pathWalk(basePath string, fp fileProcessor) {
 type fileProcessor struct {
 	source      string
 	destination string
+
+	transferType dataTransferType
 }
 
-func (obj *fileProcessor) init(source, destination string) {
+func (obj *fileProcessor) init(source, destination string, transferType dataTransferType) {
 	obj.source = source
 	obj.destination = destination
+	obj.transferType = transferType
 }
 
 func (obj *fileProcessor) doProcess(fileName string) {
+
+	var err error
 
 	getSubFilePath := func(path string) string {
 		dir, file := filepath.Split(path)
@@ -87,10 +93,84 @@ func (obj *fileProcessor) doProcess(fileName string) {
 	}
 
 	subFilePath := getSubFilePath(fileName)
+	destintion := filepath.Join(obj.destination, subFilePath)
+	//err = os.MkdirAll(filepath.Dir(subFilePath), 0777)
+	err = createDirectory(filepath.Dir(destintion))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		return
+	}
 
-	fmt.Printf("mv %s %s\n", fileName,
-		filepath.Join(obj.destination, subFilePath))
-
+	switch obj.transferType {
+	case dataCopy:
+		fmt.Printf("cp %s %s\n", fileName, destintion)
+		err = copyFile(fileName, destintion)
+	case dataMove:
+		fmt.Printf("mv %s %s\n", fileName, destintion)
+		err = moveFile(fileName, destintion)
+	}
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+func createDirectory(path string) error {
+
+	// Check if the directory exists
+	_, err := os.Stat(path)
+	if err == nil {
+		fmt.Printf("exists: %s\n", path)
+		return nil
+	}
+
+	// If the directory does not exist, create its parent
+	if os.IsNotExist(err) {
+		err = createDirectory(filepath.Dir(path))
+		if err != nil {
+			return err
+		}
+		// Create the directory
+		err = os.Mkdir(path, 0777)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("created: %s\n", path)
+	}
+	return nil
+}
+
+func moveFile(src, dst string) error {
+	return os.Rename(src, dst)
+}
+
+func copyFile(src, dst string) error {
+	sourceFileStat, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+
+	if !sourceFileStat.Mode().IsRegular() {
+		return fmt.Errorf("%s is not a regular file", src)
+	}
+
+	source, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer source.Close()
+
+	destination, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer destination.Close()
+	nBytes, err := io.Copy(destination, source)
+
+	if nBytes != sourceFileStat.Size() {
+		return fmt.Errorf("copy %d bytes from %d", nBytes, sourceFileStat.Size())
+	}
+
+	return err
+}
