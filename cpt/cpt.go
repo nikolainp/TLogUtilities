@@ -27,7 +27,13 @@ func main() {
 	var fp fileProcessor
 	fp.init(conf.sourceFolder, conf.destinationFolder, conf.transferType)
 
-	pathWalk(conf.sourceFolder, fp)
+	var fc fileChecker
+	if err := fc.init(conf.fileNames); err != nil {
+		fmt.Fprintf(os.Stderr, "Config error: %v\n", err)
+		return
+	}
+
+	pathWalk(conf.sourceFolder, fp, fc)
 }
 
 func getConfig(args []string) (conf config) {
@@ -45,7 +51,7 @@ func getConfig(args []string) (conf config) {
 	return conf
 }
 
-func pathWalk(basePath string, fp fileProcessor) {
+func pathWalk(basePath string, fp fileProcessor, fc fileChecker) {
 	err := filepath.Walk(basePath, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Prevent panic by handling failure accessing a path %q: %v\n", path, err)
@@ -54,7 +60,10 @@ func pathWalk(basePath string, fp fileProcessor) {
 		if info.IsDir() {
 			return nil
 		}
-		fp.doProcess(path)
+
+		if fc.isTrueFile(filepath.Base(path)) {
+			fp.doProcess(path)
+		}
 
 		// if isCancel() {
 		// 	return fmt.Errorf("process is cancel")
@@ -94,7 +103,6 @@ func (obj *fileProcessor) doProcess(fileName string) {
 
 	subFilePath := getSubFilePath(fileName)
 	destintion := filepath.Join(obj.destination, subFilePath)
-	//err = os.MkdirAll(filepath.Dir(subFilePath), 0777)
 	err = createDirectory(filepath.Dir(destintion))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
