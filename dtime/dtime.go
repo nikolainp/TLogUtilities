@@ -36,13 +36,23 @@ func init() {
 }
 
 func main() {
-	var conf config
-
-	if err := conf.init(os.Args, version, date); err != nil {
-		fmt.Fprintf(os.Stderr, "Config error: %v\n", err)
-		return
-	}
+	conf := getConfig(os.Args)
 	run(conf, os.Stdin, os.Stdout)
+}
+
+func getConfig(args []string) (conf config) {
+	if err := conf.init(args); err != nil {
+		switch err.(type) {
+		case printVersion:
+			fmt.Printf("Version: %s (%s)\n", version, date)
+		case printUsage:
+
+		default:
+			fmt.Fprintf(os.Stderr, "Config error: %v\n", err)
+		}
+		os.Exit(0)
+	}
+	return conf
 }
 
 func run(conf config, sIn io.Reader, sOut io.Writer) {
@@ -155,7 +165,7 @@ func (obj *streamProcessor) doRead(sIn io.Reader) {
 			break
 		}
 	}
-	
+
 	close(obj.chBuf)
 }
 

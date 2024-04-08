@@ -2,9 +2,15 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"time"
 )
+
+type printUsage struct {
+	error
+}
+type printVersion struct {
+	error
+}
 
 type operationType int
 
@@ -14,15 +20,8 @@ const (
 	operationTimeGapBack
 )
 
-type buidInformation struct {
-	version string
-	//	commit  string
-	date string
-}
-
 type config struct {
 	programName string
-	build       buidInformation
 
 	operation operationType
 
@@ -31,12 +30,9 @@ type config struct {
 	filterEdge       edgeType
 }
 
-func (obj *config) init(args []string, version, date string) (err error) {
+func (obj *config) init(args []string) (err error) {
 
 	obj.programName = args[0]
-	obj.build.version = version
-	//	obj.build.commit = commit
-	obj.build.date = date
 	obj.operation = operationNone
 
 	getFilterTime := func(data string) (time.Time, error) {
@@ -70,9 +66,7 @@ func (obj *config) init(args []string, version, date string) (err error) {
 		obj.operation = operationTimeGapBack
 	case 2:
 		if args[1] == "-v" {
-			fmt.Printf("Version: %s (%s)\n", obj.build.version, obj.build.date)
-			os.Exit(0)
-			return nil
+			return printVersion{}
 		}
 
 		obj.operation = operationFilterByTyme
