@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"io"
 	"os"
 	"strings"
 	"testing"
@@ -22,12 +21,8 @@ func Test_streamProcessor(t *testing.T) {
 
 	var obj streamProcessor
 
-	obj.init(func(buf []byte, sOut io.Writer) {
-		if len(buf) == 0 {
-			return
-		}
-		sOut.Write(buf)
-		sOut.Write([]byte("\n"))
+	obj.init(func(buf []byte) bool {
+		return true
 	})
 	for i := 0; i < 1; i++ {
 		obj.doRead(streamIn)
@@ -205,12 +200,8 @@ func Test_streamProcessor_run(t *testing.T) {
 			var obj streamProcessor
 
 			sOut := &bytes.Buffer{}
-			obj.init(func(buf []byte, sOut io.Writer) {
-				if len(buf) == 0 {
-					return
-				}
-				sOut.Write(buf)
-				sOut.Write([]byte("\n"))
+			obj.init(func(buf []byte) bool {
+				return true
 			})
 			obj.bufSize = 5
 
@@ -230,12 +221,8 @@ func Benchmark_Test_doRead(b *testing.B) {
 	}
 
 	var obj streamProcessor
-	obj.init(func(buf []byte, sOut io.Writer) {
-		if len(buf) == 0 {
-			return
-		}
-		// sOut.Write(buf)
-		// sOut.Write([]byte("\n"))
+	obj.init(func(buf []byte) bool {
+		return true
 	})
 	obj.bufSize = 30
 	obj.run(file, os.Stdout)
@@ -268,7 +255,7 @@ func Benchmark_doRead(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		obj.init(func(buf []byte, sOut io.Writer) {})
+		obj.init(func(buf []byte) bool { return true })
 		obj.bufSize = 5
 		obj.run(sIn, sOut)
 		sIn.Reset(strIn)
