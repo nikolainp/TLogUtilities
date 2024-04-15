@@ -63,7 +63,7 @@ func run(conf config, sIn io.Reader, sOut io.Writer) {
 		// filter by time: start finish edgeType
 		filter := new(lineFilter)
 		filter.init(conf.filterBeginTime, conf.filterFinishTime, conf.filterEdge)
-		stream.init(filter.isTrueLine)
+		stream.init(filter.LineProcess)
 		stream.run(sIn, sOut)
 
 	case operationTimeGapBack:
@@ -92,14 +92,14 @@ type streamBuffer struct {
 }
 
 type streamProcessor struct {
-	poolBuf sync.Pool
-	chBuf   chan streamBuffer
-	filter  func([]byte) bool
+	poolBuf       sync.Pool
+	chBuf         chan streamBuffer
+	lineProcessor func([]byte, io.Writer)
 
 	bufSize int
 }
 
-func (obj *streamProcessor) init(funcProcessor func([]byte) bool) {
+func (obj *streamProcessor) init(funcProcessor func([]byte, io.Writer)) {
 	obj.bufSize = 1024 * 1024
 
 	obj.poolBuf = sync.Pool{New: func() interface{} {
@@ -107,7 +107,7 @@ func (obj *streamProcessor) init(funcProcessor func([]byte) bool) {
 		return &lines
 	}}
 	obj.chBuf = make(chan streamBuffer, 1)
-	obj.filter = funcProcessor
+	obj.lineProcessor = funcProcessor
 }
 
 func (obj *streamProcessor) run(sIn io.Reader, sOut io.Writer) {
@@ -128,10 +128,10 @@ func (obj *streamProcessor) run(sIn io.Reader, sOut io.Writer) {
 }
 
 func (obj *streamProcessor) doRead(sIn io.Reader) {
-	//var lastLineIndex, nextLineIndex int
+
 	reader := bufio.NewReaderSize(sIn, obj.bufSize)
 
-	readNextBuffer := func(buf []byte) int {
+	readBuffer := func(buf []byte) int {
 		n, err := reader.Read(buf)
 		if n == 0 && err == io.EOF {
 			return 0
@@ -146,7 +146,7 @@ func (obj *streamProcessor) doRead(sIn io.Reader) {
 
 	for {
 		buf := obj.poolBuf.Get().(*[]byte)
-		if n := readNextBuffer(*buf); n == 0 {
+		if n := readBuffer(*buf); n == 0 {
 			break
 		} else {
 			obj.chBuf <- streamBuffer{buf, n}
@@ -159,41 +159,35 @@ func (obj *streamProcessor) doRead(sIn io.Reader) {
 func (obj *streamProcessor) doWrite(sOut io.Writer) {
 
 	writer := bufio.NewWriterSize(sOut, obj.bufSize*2)
-	lastString := make([]byte, obj.bufSize*2)
-	isExistsLastString := false
+	lastLine := make([]byte, obj.bufSize*2)
+	isExistsLastLine := false
 
-	writeString := func(buf []byte) {
-		writer.Write(buf)
-		writer.Write([]byte("\n"))
-	}
 	writeBuffer := func(buf []byte, n int) {
 		isLastStringFull := bytes.Equal(buf[n-1:n], []byte("\n"))
 
 		bufSlice := bytes.Split(buf[:n], []byte("\n"))
 		for i := range bufSlice {
-			if i == 0 && isExistsLastString {
-				lastString = append(lastString, bufSlice[i]...)
-				if len(bufSlice) > 1 && obj.filter(lastString) {
-					writeString(lastString)
-					isExistsLastString = false
+			if i == 0 && isExistsLastLine {
+				lastLine = append(lastLine, bufSlice[i]...)
+				if len(bufSlice) > 1 {
+					obj.lineProcessor(lastLine, writer)
+					isExistsLastLine = false
 				}
 				continue
 			}
 			if i == len(bufSlice)-1 {
 				if !isLastStringFull {
-					lastString = lastString[0:len(bufSlice[i])]
-					nc := copy(lastString, bufSlice[i])
+					lastLine = lastLine[0:len(bufSlice[i])]
+					nc := copy(lastLine, bufSlice[i])
 					if nc != len(bufSlice[i]) {
 						panic(0)
 					}
-					isExistsLastString = true
+					isExistsLastLine = true
 				}
 				continue
 			}
 
-			if obj.filter(bufSlice[i]) {
-				writeString(bufSlice[i])
-			}
+			obj.lineProcessor(lastLine, writer)
 		}
 	}
 
@@ -203,8 +197,8 @@ func (obj *streamProcessor) doWrite(sOut io.Writer) {
 
 			obj.poolBuf.Put(buffer.buf)
 		} else {
-			if isExistsLastString && obj.filter(lastString) {
-				writeString(lastString)
+			if isExistsLastLine {
+				obj.lineProcessor(lastLine, writer)
 			}
 			break
 		}
