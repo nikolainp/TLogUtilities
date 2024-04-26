@@ -53,7 +53,7 @@ func (obj *lineFilter) init(start time.Time, stop time.Time, edge edgeType) {
 	}
 }
 
-func (obj *lineFilter) LineProcess(data []byte, writer io.Writer) {
+func (obj *lineFilter) LineProcessor(data []byte, writer io.Writer) {
 	if obj.filter(data) {
 		writer.Write(data)
 		writer.Write([]byte("\n"))
@@ -113,8 +113,7 @@ func (obj *lineFilter) isTrueLineInvolve(data []byte) bool {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-func getStrTimeFromLine(data []byte) (time []byte, duration []byte) {
-
+func getStrTimePosition(data []byte) (begin, finish int) {
 	isNumber := func(data byte) bool {
 		if data == '0' || data == '1' || data == '2' || data == '3' ||
 			data == '4' || data == '5' || data == '6' || data == '7' ||
@@ -127,10 +126,13 @@ func getStrTimeFromLine(data []byte) (time []byte, duration []byte) {
 
 	logPositin := bytes.Index(data, []byte(".log:"))
 	if logPositin < 8 || len(data) < logPositin+18 {
-		return nil, nil
+		return 0, 0
 	}
 
-	strTime := data[logPositin-8 : logPositin+17]
+	begin = logPositin - 8
+	finish = logPositin + 17
+
+	strTime := data[begin:finish]
 	if !isNumber(strTime[0]) ||
 		!isNumber(strTime[1]) ||
 		!isNumber(strTime[2]) ||
@@ -139,16 +141,16 @@ func getStrTimeFromLine(data []byte) (time []byte, duration []byte) {
 		!isNumber(strTime[5]) ||
 		!isNumber(strTime[6]) ||
 		!isNumber(strTime[7]) {
-		return nil, nil
+		return 0, 0
 	}
 	if strTime[15] != ':' || strTime[18] != '.' {
-		return nil, nil
+		return 0, 0
 	}
 	if !isNumber(strTime[13]) ||
 		!isNumber(strTime[14]) ||
 		!isNumber(strTime[16]) ||
 		!isNumber(strTime[17]) {
-		return nil, nil
+		return 0, 0
 	}
 	if !isNumber(strTime[19]) ||
 		!isNumber(strTime[20]) ||
@@ -156,14 +158,33 @@ func getStrTimeFromLine(data []byte) (time []byte, duration []byte) {
 		!isNumber(strTime[22]) ||
 		!isNumber(strTime[23]) ||
 		!isNumber(strTime[24]) {
-		return nil, nil
+		return 0, 0
 	}
 
-	commaPosition := bytes.Index(data[logPositin+18:], []byte(","))
+	return
+}
+
+func getStrDuration(data []byte) []byte {
+	commaPosition := bytes.Index(data, []byte(","))
 	if commaPosition == -1 {
+		return nil
+	}
+
+	return data[:commaPosition]
+}
+
+func getStrTimeFromLine(data []byte) (time []byte, duration []byte) {
+
+	timeBegin, timeFinish := getStrTimePosition(data)
+	if timeBegin == 0 && timeFinish == 0 {
 		return nil, nil
 	}
-	strDuration := data[logPositin+18 : logPositin+18+commaPosition]
+	strTime := data[timeBegin:timeFinish]
+
+	strDuration := getStrDuration(data[timeFinish+1:])
+	if strDuration == nil {
+		return nil, nil
+	}
 
 	return strTime, strDuration
 }

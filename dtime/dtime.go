@@ -63,11 +63,14 @@ func run(conf config, sIn io.Reader, sOut io.Writer) {
 		// filter by time: start finish edgeType
 		filter := new(lineFilter)
 		filter.init(conf.filterBeginTime, conf.filterFinishTime, conf.filterEdge)
-		stream.init(filter.LineProcess)
+		stream.init(filter.LineProcessor)
 		stream.run(sIn, sOut)
 
 	case operationTimeGapBack:
 		// add TIMEGAP TIMEBACK events
+		tg := new(timeGap)
+		stream.init(tg.lineProcessor)
+		stream.run(sIn, sOut)
 	}
 
 	// operations with time
@@ -187,7 +190,7 @@ func (obj *streamProcessor) doWrite(sOut io.Writer) {
 				continue
 			}
 
-			obj.lineProcessor(lastLine, writer)
+			obj.lineProcessor(bufSlice[i], writer)
 		}
 	}
 
