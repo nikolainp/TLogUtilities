@@ -14,7 +14,7 @@ type timeGapTread struct {
 
 type timeGap struct {
 	processes map[string]time.Time
-	treads map[timeGapTread]time.Time
+	treads    map[timeGapTread]time.Time
 }
 
 func (obj *timeGap) init() {
@@ -42,21 +42,22 @@ func (obj *timeGap) lineProcessor(data []byte, writer io.Writer) {
 
 	strProcess := data[0:timeBegin]
 	strTime := data[timeBegin:timeFinish]
+	timeTime := getTime(strTime)
 	strDuration := getStrDuration(data[timeFinish+1:])
 	strTread := getTread(data)
 
-	if eventStartTime,ok := obj.processes[string(strProcess)]; ok {
-		eventStopTime := getTime(strTime)
+	if eventStartTime, ok := obj.processes[string(strProcess)]; ok {
+		eventStopTime := timeTime
 		eventDuration := eventStopTime.Sub(eventStartTime)
 
 		if eventDuration < 0 {
 			writer.Write(writeEvent("%s%s.%06d-%d,TIMEBACK\n",
-			strProcess, eventStopTime.Format("06010215.log:04:05"),
-			eventStopTime.Nanosecond()/1000,
-			eventDuration.Abs().Milliseconds()))
+				strProcess, eventStopTime.Format("06010215.log:04:05"),
+				eventStopTime.Nanosecond()/1000,
+				eventDuration.Abs().Milliseconds()))
 		}
 	}
-	obj.processes[string(strProcess)] = getTime(strTime)
+	obj.processes[string(strProcess)] = timeTime
 
 	thread := timeGapTread{string(strProcess), string(strTread)}
 	if eventStartTime, ok := obj.treads[thread]; ok {
@@ -69,7 +70,7 @@ func (obj *timeGap) lineProcessor(data []byte, writer io.Writer) {
 			eventStopTime.Nanosecond()/1000,
 			eventDuration.Milliseconds(), strTread))
 	}
-	obj.treads[thread] = getTime(strTime)
+	obj.treads[thread] = timeTime
 
 	writer.Write(data)
 	writer.Write([]byte("\n"))
