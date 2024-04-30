@@ -69,6 +69,7 @@ func run(conf config, sIn io.Reader, sOut io.Writer) {
 	case operationTimeGapBack:
 		// add TIMEGAP TIMEBACK events
 		tg := new(timeGap)
+		tg.init()
 		stream.init(tg.lineProcessor)
 		stream.run(sIn, sOut)
 	}
