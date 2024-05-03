@@ -7,29 +7,29 @@ import (
 	"time"
 )
 
-type timeGapTread struct {
+type timeGapThread struct {
 	process string
-	tread   string
+	thread   string
 }
 
 type timeGap struct {
 	processes map[string]time.Time
-	treads    map[timeGapTread]time.Time
+	threads    map[timeGapThread]time.Time
 }
 
 func (obj *timeGap) init() {
 	obj.processes = make(map[string]time.Time)
-	obj.treads = make(map[timeGapTread]time.Time)
+	obj.threads = make(map[timeGapThread]time.Time)
 }
 
 func (obj *timeGap) lineProcessor(data []byte, writer io.Writer) {
 
-	getTread := func(data []byte) []byte {
-		treadMask := []byte(",OSTread=")
-		treadPosition := bytes.Index(data, treadMask)
-		commaPosition := bytes.Index(data[treadPosition+len(treadMask):], []byte(","))
+	getThread := func(data []byte) []byte {
+		threadMask := []byte(",OSThread=")
+		threadPosition := bytes.Index(data, threadMask)
+		commaPosition := bytes.Index(data[threadPosition+len(threadMask):], []byte(","))
 
-		return data[treadPosition+len(treadMask) : treadPosition+len(treadMask)+commaPosition]
+		return data[threadPosition+len(threadMask) : threadPosition+len(threadMask)+commaPosition]
 	}
 	writeEvent := func(f string, args ...any) []byte {
 		return []byte(fmt.Sprintf(f, args...))
@@ -44,7 +44,7 @@ func (obj *timeGap) lineProcessor(data []byte, writer io.Writer) {
 	strTime := data[timeBegin:timeFinish]
 	timeTime := getTime(strTime)
 	strDuration := getStrDuration(data[timeFinish+1:])
-	strTread := getTread(data)
+	strThread := getThread(data)
 
 	if eventStartTime, ok := obj.processes[string(strProcess)]; ok {
 		eventStopTime := timeTime
@@ -59,18 +59,18 @@ func (obj *timeGap) lineProcessor(data []byte, writer io.Writer) {
 	}
 	obj.processes[string(strProcess)] = timeTime
 
-	thread := timeGapTread{string(strProcess), string(strTread)}
-	if eventStartTime, ok := obj.treads[thread]; ok {
+	thread := timeGapThread{string(strProcess), string(strThread)}
+	if eventStartTime, ok := obj.threads[thread]; ok {
 
 		eventStopTime := getStartTime(strTime, strDuration)
 		eventDuration := eventStopTime.Sub(eventStartTime)
 
-		writer.Write(writeEvent("%s%s.%06d-%d,TIMEGAP,OSTread=%s\n",
+		writer.Write(writeEvent("%s%s.%06d-%d,TIMEGAP,OSThread=%s\n",
 			strProcess, eventStopTime.Format("06010215.log:04:05"),
 			eventStopTime.Nanosecond()/1000,
-			eventDuration.Milliseconds(), strTread))
+			eventDuration.Milliseconds(), strThread))
 	}
-	obj.treads[thread] = timeTime
+	obj.threads[thread] = timeTime
 
 	writer.Write(data)
 	writer.Write([]byte("\n"))
