@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"flag"
 	"fmt"
 	"io"
 	"io/fs"
@@ -38,32 +37,33 @@ func init() {
 }
 
 func main() {
-	var printVersion, stripOutput bool
 	var worker pathWalker
 
-	fs := flag.NewFlagSet("", flag.ContinueOnError)
-	fs.BoolVar(&printVersion, "v", false, "print version")
-	fs.BoolVar(&stripOutput, "s", false, "without filename in line")
+	conf := getConfig(os.Args)
 
-	if err := fs.Parse(os.Args[1:]); err != nil {
-		fmt.Fprintf(fs.Output(), "Usage of %s:\n", os.Args[0])
-		fs.PrintDefaults()
-		return
-	}
-
-	if printVersion {
-		fmt.Printf("Version: %s (%s)\n", version, date)
-		return
-	}
-
-	worker.init(!stripOutput)
-	for _, path := range fs.Args() {
+	worker.init(conf.isNeedPrefix)
+	for _, path := range conf.paths {
 		worker.pathWalk(path)
 
 		if isCancel() {
 			break
 		}
 	}
+}
+
+func getConfig(args []string) (conf config) {
+	if err := conf.init(args); err != nil {
+		switch err := err.(type) {
+		case printVersion:
+			fmt.Printf("Version: %s (%s)\n", version, date)
+		case printUsage:
+			fmt.Fprint(os.Stderr, err.usage)
+		default:
+			fmt.Fprintf(os.Stderr, "Config error: %v\n", err)
+		}
+		os.Exit(0)
+	}
+	return conf
 }
 
 ///////////////////////////////////////////////////////////////////////////////
