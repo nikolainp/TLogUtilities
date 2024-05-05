@@ -18,7 +18,7 @@ func Test_processStream(t *testing.T) {
 		{
 			"test 1",
 			"",
-			"",
+			"\n",
 		},
 		{
 			"test 2",

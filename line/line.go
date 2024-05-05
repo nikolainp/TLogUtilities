@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sync"
 	"syscall"
 )
 
@@ -136,97 +137,174 @@ func (obj *pathWalker) doProcess(fileName string) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+type streamBuffer struct {
+	buf *[]byte
+	len int
+}
+
+type streamLineType int
+
+const (
+	streamNoneType streamLineType = iota
+	streamTJType
+	streamAnsType
+)
+
 type lineChecker struct {
-	bufSize int
-	buffer  []byte
+	poolBuf sync.Pool
+	chBuf   chan streamBuffer
+
+	bufSize          int
+	prefixFirstLine  []byte
+	prefixSecondLine []byte
 }
 
 func (obj *lineChecker) init() {
 	obj.bufSize = 1024 * 1024 * 10
-	obj.buffer = make([]byte, obj.bufSize)
+
+	obj.poolBuf = sync.Pool{New: func() interface{} {
+		lines := make([]byte, obj.bufSize)
+		return &lines
+	}}
 }
 
 func (obj *lineChecker) processStream(sName string, sIn io.Reader, sOut io.Writer) {
+	var wg sync.WaitGroup
 
-	reader := bufio.NewReaderSize(sIn, obj.bufSize)
-	writer := bufio.NewWriterSize(sOut, obj.bufSize*2)
-
-	checkError := func(err error) {
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "Error: ", err)
-		}
-	}
-	writeLine := func(prefix, line []byte) {
-		_, err := writer.Write(prefix)
-		checkError(err)
-		_, err = writer.Write(line)
-		checkError(err)
-	}
 	getPrefix := func(prefix string) string {
 		if len(prefix) == 0 {
 			return ""
 		}
 		return prefix + ":"
 	}
-
-	prefixFirstLine := []byte(getPrefix(sName))
-	prefixSecondLine := []byte("<line>")
-
-	if isCancel() {
-		return
+	goFunc := func(work func()) {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			work()
+		}()
 	}
 
-	// read first line
-	n, err := reader.Read(obj.buffer)
-	if n == 0 && err == io.EOF {
-		return
-	}
-	checkError(err)
+	obj.prefixFirstLine = []byte(getPrefix(sName))
+	obj.prefixSecondLine = []byte("<line>")
 
-	bufSlice := bytes.Split(obj.buffer[:n], []byte("\n"))
-	if bytes.Equal(bufSlice[0][:3], []byte("\ufeff")) {
-		bufSlice[0] = bufSlice[0][3:]
-	}
-	if len(bufSlice[0]) == 0 {
-		return
-	}
-	writeLine(prefixFirstLine, bufSlice[0])
-	bufSlice = bufSlice[1:]
-	isLastLineComplete := bytes.Equal(obj.buffer[n-1:n], []byte("\n"))
+	obj.chBuf = make(chan streamBuffer, 1)
 
-	for {
-		for i := range bufSlice {
-			if obj.isFirstLine(bufSlice[i]) {
-				writeLine([]byte{}, []byte("\n"))
-				writeLine(prefixFirstLine, bufSlice[i])
-			} else {
-				writeLine(prefixSecondLine, bufSlice[i])
-			}
+	goFunc(func() { obj.doRead(sIn) })
+	goFunc(func() { obj.doWrite(sOut) })
+
+	wg.Wait()
+}
+
+func (obj *lineChecker) doRead(sIn io.Reader) {
+
+	reader := bufio.NewReaderSize(sIn, obj.bufSize)
+
+	readBuffer := func(buf []byte) int {
+		n, err := reader.Read(buf)
+		if n == 0 && err == io.EOF {
+			return 0
 		}
 
-		err = writer.Flush()
-		checkError(err)
+		if isCancel() {
+			return 0
+		}
+
+		return n
+	}
+
+	for {
+		buf := obj.poolBuf.Get().(*[]byte)
+		if n := readBuffer(*buf); n == 0 {
+			break
+		} else {
+			obj.chBuf <- streamBuffer{buf, n}
+		}
+	}
+
+	close(obj.chBuf)
+}
+
+func (obj *lineChecker) doWrite(sOut io.Writer) {
+
+	writer := bufio.NewWriterSize(sOut, obj.bufSize*2)
+	lastLine := make([]byte, obj.bufSize*2)
+	isExistsLastLine := false
+	streamType := streamNoneType
+
+	writeBuffer := func(buf []byte, n int) {
+		isLastStringFull := bytes.Equal(buf[n-1:n], []byte("\n"))
+
+		bufSlice := bytes.Split(buf[:n], []byte("\n"))
+
+		if streamType == streamNoneType {
+			if bytes.Equal(bufSlice[0][:3], []byte("\ufeff")) {
+				streamType = streamTJType
+				bufSlice[0] = bufSlice[0][3:]
+			}
+
+			writeLine(writer, obj.prefixFirstLine, bufSlice[0])
+			bufSlice = bufSlice[1:]
+		}
+
+		for i := range bufSlice {
+			if i == 0 && isExistsLastLine {
+				lastLine = append(lastLine, bufSlice[i]...)
+				if len(bufSlice) > 1 {
+					obj.lineProcessor(lastLine, writer)
+					isExistsLastLine = false
+				}
+				continue
+			}
+			if i == len(bufSlice)-1 {
+				if !isLastStringFull {
+					lastLine = lastLine[0:len(bufSlice[i])]
+					nc := copy(lastLine, bufSlice[i])
+					if nc != len(bufSlice[i]) {
+						panic(0)
+					}
+					isExistsLastLine = true
+				}
+				continue
+			}
+
+			if isCancel() {
+				return
+			}
+
+			obj.lineProcessor(bufSlice[i], writer)
+		}
+	}
+
+	for {
+		if buffer, ok := <-obj.chBuf; ok {
+			writeBuffer(*(buffer.buf), buffer.len)
+
+			obj.poolBuf.Put(buffer.buf)
+		} else {
+			if isExistsLastLine {
+				obj.lineProcessor(lastLine, writer)
+			}
+			break
+		}
 
 		if isCancel() {
 			break
 		}
-
-		n, err := reader.Read(obj.buffer)
-		if n == 0 && err == io.EOF {
-			break
-		}
-		checkError(err)
-		bufSlice = bytes.Split(obj.buffer[:n], []byte("\n"))
-
-		if !isLastLineComplete {
-			writeLine([]byte{}, bufSlice[0])
-			bufSlice = bufSlice[1:]
-		}
-		isLastLineComplete = bytes.Equal(obj.buffer[n-1:n], []byte("\n"))
 	}
-	writeLine([]byte{}, []byte("\n"))
-	err = writer.Flush()
-	checkError(err)
+
+	writeLine(writer, []byte{}, []byte("\n"))
+	checkError(writer.Flush())
+}
+
+func (obj *lineChecker) lineProcessor(data []byte, writer io.Writer) {
+
+	if obj.isFirstLine(data) {
+		writeLine(writer, []byte{}, []byte("\n"))
+		writeLine(writer, obj.prefixFirstLine, data)
+	} else {
+		writeLine(writer, obj.prefixSecondLine, data)
+	}
 }
 
 func (obj *lineChecker) isFirstLine(data []byte) bool {
@@ -266,4 +344,16 @@ func (obj *lineChecker) isFirstLine(data []byte) bool {
 	}
 
 	return true
+}
+
+func checkError(err error) {
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error: ", err)
+	}
+}
+func writeLine(writer io.Writer, prefix, line []byte) {
+	_, err := writer.Write(prefix)
+	checkError(err)
+	_, err = writer.Write(line)
+	checkError(err)
 }
