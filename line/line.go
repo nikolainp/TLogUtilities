@@ -146,7 +146,7 @@ type streamLineType int
 
 const (
 	streamNoneType streamLineType = iota
-	streamTJType
+	streamTLType
 	streamAnsType
 )
 
@@ -239,7 +239,7 @@ func (obj *lineChecker) doWrite(sOut io.Writer) {
 
 		if streamType == streamNoneType {
 			if bytes.Equal(bufSlice[0][:3], []byte("\ufeff")) {
-				streamType = streamTJType
+				streamType = streamTLType
 				bufSlice[0] = bufSlice[0][3:]
 			}
 
