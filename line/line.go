@@ -238,7 +238,8 @@ func (obj *lineChecker) doWrite(sOut io.Writer) {
 		bufSlice := bytes.Split(buf[:n], []byte("\n"))
 
 		if streamType == streamNoneType {
-			if bytes.Equal(bufSlice[0][:3], []byte("\ufeff")) {
+			if  3 <= len(bufSlice[0]) &&
+				bytes.Equal(bufSlice[0][:3], []byte("\ufeff")) {
 				streamType = streamTLType
 				bufSlice[0] = bufSlice[0][3:]
 			}
