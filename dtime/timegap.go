@@ -54,7 +54,7 @@ func (obj *timeGap) lineProcessor(data []byte, writer io.Writer) {
 			writer.Write(writeEvent("%s%s.%06d-%d,TIMEBACK\n",
 				strProcess, eventStopTime.Format("06010215.log:04:05"),
 				eventStopTime.Nanosecond()/1000,
-				eventDuration.Abs().Milliseconds()))
+				eventDuration.Abs().Microseconds()))
 		}
 	}
 	obj.processes[string(strProcess)] = timeTime
@@ -68,7 +68,7 @@ func (obj *timeGap) lineProcessor(data []byte, writer io.Writer) {
 		writer.Write(writeEvent("%s%s.%06d-%d,TIMEGAP,OSThread=%s\n",
 			strProcess, eventStopTime.Format("06010215.log:04:05"),
 			eventStopTime.Nanosecond()/1000,
-			eventDuration.Milliseconds(), strThread))
+			eventDuration.Microseconds(), strThread))
 	}
 	obj.threads[thread] = timeTime
 
