@@ -6,9 +6,18 @@ import (
 	"testing"
 )
 
+type mockMonitor struct {
+}
+
+func (obj *mockMonitor) Start()                              {}
+func (obj *mockMonitor) WriteEvent(frmt string, args ...any) {}
+func (obj *mockMonitor) NewData(count int, size int64)       {}
+func (obj *mockMonitor) ProcessedData(count int, size int64) {}
+func (obj *mockMonitor) Stop()                               {}
+
 func Test_processStream(t *testing.T) {
 	var obj lineChecker
-	obj.init()
+	obj.init(new(mockMonitor))
 
 	tests := []struct {
 		name     string
@@ -74,7 +83,7 @@ func Test_lineChecker_isFirstLine(t *testing.T) {
 		{"test 3", []byte("81029657-3fe6-4cd6-80c0-36de78fe6657"), false},
 	}
 
-	obj.init()
+	obj.init(new(mockMonitor))
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := obj.isFirstLine(tt.in0); got != tt.want {
@@ -96,7 +105,7 @@ func Benchmark_processStream(b *testing.B) {
 
 	streamIn := strings.NewReader(bufferIn.String())
 	streamOut := &bytes.Buffer{}
-	check.init()
+	check.init(new(mockMonitor))
 
 	b.SetBytes(streamIn.Size())
 	b.ResetTimer()
@@ -110,7 +119,7 @@ func Benchmark_isFirstLine(b *testing.B) {
 	var check lineChecker
 	data := []byte(`32:47.733007-0,EXCP,0,process=ragent,OSThread=3668,Exception=81029657-3fe6-4cd6-80c0-36de78fe6657,Descr='src\rtrsrvc\src\remoteinterfaceimpl.cpp(1232):`)
 
-	check.init()
+	check.init(new(mockMonitor))
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
