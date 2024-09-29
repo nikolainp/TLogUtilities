@@ -6,11 +6,12 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"sync"
 )
 
 type FilePathWalker interface {
 	Add(...string)
-	Run(context.Context) <-chan string
+	Run(context.Context, *sync.WaitGroup) <-chan string
 }
 
 func NewFilePathWalker(callBack func(int64, int)) FilePathWalker {
@@ -37,8 +38,19 @@ func (obj *filePathWalker) Add(path ...string) {
 	obj.rootPaths = append(obj.rootPaths, path...)
 }
 
-func (obj *filePathWalker) Run(ctx context.Context) <-chan string {
-	go obj.runOutput(ctx)
+func (obj *filePathWalker) Run(ctx context.Context, wg *sync.WaitGroup) <-chan string {
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		obj.runWalk(ctx)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		obj.runOutput(ctx)
+	}()
 
 	return obj.output
 }
@@ -51,7 +63,7 @@ func (obj *filePathWalker) runWalk(ctx context.Context) {
 	for _, path := range obj.rootPaths {
 		if err := obj.runPathWalk(ctx, path, filepath.Walk); err != nil {
 			fmt.Fprintf(os.Stderr, "Error walking the path %q: %v\n", path, err)
-		}	
+		}
 	}
 }
 
@@ -95,17 +107,16 @@ func (obj *filePathWalker) runPathWalk(ctx context.Context, path string, worker 
 		if info.IsDir() {
 			return nil
 		}
-	
+
 		select {
 		case obj.input <- path:
 			obj.monitor(info.Size(), 1)
-		case <- ctx.Done():
+		case <-ctx.Done():
 			return fmt.Errorf("process is cancel")
 		}
-	
+
 		return nil
 	}
-	
 
 	return worker(path, walkFunc)
 }
