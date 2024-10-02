@@ -2,13 +2,14 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"strings"
 	"testing"
 )
 
-func Test_processStream(t *testing.T) {
-	var obj lineChecker
-	obj.init()
+func Test_streamProcessor_Run(t *testing.T) {
+
+	ctx := context.Background()
 
 	tests := []struct {
 		name     string
@@ -52,8 +53,18 @@ test:32:54.905000-0,EXCP,1,process=ragent,OSThread=3668,ClientID=4223,Exception=
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			var gotSize int64
+			var gotCount int
+
+			monitor := func(size int64, count int) {
+				gotSize += size
+				gotCount += count
+			}
+
+			obj := NewStreamProcessor(monitor)
+
 			sOut := &bytes.Buffer{}
-			obj.processStream("test", strings.NewReader(tt.sIn), sOut)
+			obj.Run(ctx, "test", strings.NewReader(tt.sIn), sOut)
 			if gotSOut := sOut.String(); gotSOut != tt.wantSOut {
 				t.Errorf("processFile() = %v, want %v", gotSOut, tt.wantSOut)
 			}
@@ -61,8 +72,8 @@ test:32:54.905000-0,EXCP,1,process=ragent,OSThread=3668,ClientID=4223,Exception=
 	}
 }
 
-func Test_lineChecker_isFirstLine(t *testing.T) {
-	var obj lineChecker
+func Test_streamProcessor_isFirstLine(t *testing.T) {
+	var obj streamProcessor
 
 	tests := []struct {
 		name string
@@ -74,7 +85,6 @@ func Test_lineChecker_isFirstLine(t *testing.T) {
 		{"test 3", []byte("81029657-3fe6-4cd6-80c0-36de78fe6657"), false},
 	}
 
-	obj.init()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := obj.isFirstLine(tt.in0); got != tt.want {
@@ -88,31 +98,31 @@ func Test_lineChecker_isFirstLine(t *testing.T) {
 func Benchmark_processStream(b *testing.B) {
 
 	var bufferIn bytes.Buffer
-	var check lineChecker
 
 	for i := 0; i < 1000; i++ {
 		bufferIn.WriteString("32:47.733013-0,EXCP,1\n")
 	}
 
+	ctx := context.Background()
 	streamIn := strings.NewReader(bufferIn.String())
 	streamOut := &bytes.Buffer{}
-	check.init()
+	check := NewStreamProcessor(func(int64, int) {})
 
 	b.SetBytes(streamIn.Size())
 	b.ResetTimer()
+	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		check.processStream("", streamIn, streamOut)
+		check.Run(ctx, "", streamIn, streamOut)
 		streamOut.Reset()
 	}
 }
 
 func Benchmark_isFirstLine(b *testing.B) {
-	var check lineChecker
+	var check streamProcessor
 	data := []byte(`32:47.733007-0,EXCP,0,process=ragent,OSThread=3668,Exception=81029657-3fe6-4cd6-80c0-36de78fe6657,Descr='src\rtrsrvc\src\remoteinterfaceimpl.cpp(1232):`)
 
-	check.init()
-
 	b.ResetTimer()
+	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		check.isFirstLine(data)
 	}
