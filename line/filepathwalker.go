@@ -6,12 +6,11 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"sync"
 )
 
 type FilePathWalker interface {
 	Add(...string)
-	Run(context.Context, *sync.WaitGroup) <-chan string
+	Run(context.Context) <-chan string
 }
 
 func NewFilePathWalker(callBack func(int64, int)) FilePathWalker {
@@ -38,19 +37,10 @@ func (obj *filePathWalker) Add(path ...string) {
 	obj.rootPaths = append(obj.rootPaths, path...)
 }
 
-func (obj *filePathWalker) Run(ctx context.Context, wg *sync.WaitGroup) <-chan string {
+func (obj *filePathWalker) Run(ctx context.Context) <-chan string {
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		obj.runWalk(ctx)
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		obj.runOutput(ctx)
-	}()
+	go obj.runWalk(ctx)
+	go obj.runOutput(ctx)
 
 	return obj.output
 }
@@ -70,24 +60,21 @@ func (obj *filePathWalker) runWalk(ctx context.Context) {
 func (obj *filePathWalker) runOutput(ctx context.Context) {
 	defer close(obj.output)
 
-	done := false
-
-	for {
+	isDone := false
+	for isBreak := false; !isBreak; {
 		select {
 		case path, ok := <-obj.input:
 			if ok {
 				obj.bufPaths = append(obj.bufPaths, path)
 			} else {
-				done = true
+				isDone = true
 			}
 		case <-ctx.Done():
-			return
+			isBreak = true
 		}
 
 		if len(obj.bufPaths) == 0 {
-			if done {
-				return
-			}
+			isBreak = isDone
 		} else {
 			obj.output <- obj.bufPaths[0]
 			obj.bufPaths = obj.bufPaths[1:]
@@ -101,7 +88,7 @@ func (obj *filePathWalker) runPathWalk(ctx context.Context, path string, worker 
 
 	walkFunc := func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error walking the path %q: %v\n", path, err)
+			//fmt.Fprintf(os.Stderr, "Error walking the path %q: %v\n", path, err)
 			return err
 		}
 		if info.IsDir() {

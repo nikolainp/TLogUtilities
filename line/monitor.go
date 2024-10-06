@@ -12,7 +12,7 @@ import (
 type Monitor interface {
 	StartProcessing(int64, int)
 	FinishProcessing(int64, int)
-	Run(context.Context, *sync.WaitGroup)
+	Run(context.Context)
 }
 
 func NewMonitor(fmt string) Monitor {
@@ -47,18 +47,14 @@ func (obj *monitor) FinishProcessing(size int64, count int) {
 	obj.currentCount += count
 }
 
-func (obj *monitor) Run(ctx context.Context, wg *sync.WaitGroup) {
+func (obj *monitor) Run(ctx context.Context) {
 	obj.runTime = time.Now()
 	obj.totalSize = 0
 	obj.currentSize = 0
 	obj.totalCount = 0
 	obj.currentCount = 0
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		obj.showState(ctx)
-	}()
+	go obj.showState(ctx)
 }
 
 ///////////////////////////////////////////////////////////////////////////////

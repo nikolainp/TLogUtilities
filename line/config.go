@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"flag"
+	"os"
 )
 
 type printUsage struct {
@@ -15,6 +16,7 @@ type printVersion struct {
 
 type config struct {
 	programName string
+	rootPath    string
 
 	isNeedPrefix bool
 	paths        []string
@@ -24,8 +26,9 @@ func (obj *config) init(args []string) (err error) {
 	var isPrintVersion, stripOutput bool
 
 	obj.programName = args[0]
-	fsOut := &bytes.Buffer{}
+	obj.rootPath, _ = os.Getwd()
 
+	fsOut := &bytes.Buffer{}
 	fs := flag.NewFlagSet(args[0], flag.ContinueOnError)
 	fs.SetOutput(fsOut)
 	fs.BoolVar(&isPrintVersion, "v", false, "print version")

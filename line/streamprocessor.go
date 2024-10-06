@@ -67,6 +67,8 @@ func (obj *streamProcessor) Run(ctx context.Context, sName string, sIn io.Reader
 	goFunc(func() { obj.doWrite(ctx, sOut) })
 
 	wg.Wait()
+
+	obj.monitor(0, 1)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -190,6 +192,8 @@ func (obj *streamProcessor) doWrite(ctx context.Context, sOut io.Writer) {
 }
 
 func (obj *streamProcessor) lineProcessor(data []byte, writer io.Writer) {
+
+	obj.monitor(int64(len(data)), 0)
 
 	if obj.isFirstLine(data) {
 		writeLine(writer, []byte{}, []byte("\n"))
