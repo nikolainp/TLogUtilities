@@ -24,7 +24,7 @@ func main() {
 	defer cancel()
 
 	conf := getConfig(os.Args)
-	monitor := NewMonitor("Load data: files: %d/%d size: %s/%s time: %s [speed %s/s/%s/s ]\r")
+	monitor := NewMonitor("Load data: files: %d/%d size: %s/%s time: %s [speed %s/s/%s/s ]")
 	walker := NewFilePathWalker(monitor.StartProcessing)
 	processor := NewStreamProcessor(monitor.FinishProcessing)
 	walker.Add(conf.paths...)

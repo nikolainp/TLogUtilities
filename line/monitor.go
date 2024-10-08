@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"sync"
 	"time"
 )
@@ -16,13 +17,14 @@ type Monitor interface {
 }
 
 func NewMonitor(fmt string) Monitor {
-	return &monitor{fmtShowState: fmt}
+	return &monitor{fmtShowState: fmt + "\r"}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 type monitor struct {
 	fmtShowState string
+	showStateLen int
 
 	runTime                  time.Time
 	totalSize, currentSize   int64
@@ -70,7 +72,7 @@ func (obj *monitor) showState(ctx context.Context) {
 		select {
 		case <-ticker.C:
 			state := obj.getState()
-			state.show(os.Stderr, obj.fmtShowState, &curDuration, &curSize)
+			obj.showStateLen = state.show(os.Stderr, obj.fmtShowState, &curDuration, &curSize)
 
 		case <-ctx.Done():
 			return
@@ -79,7 +81,9 @@ func (obj *monitor) showState(ctx context.Context) {
 }
 
 func (obj *monitor) getState() monitorState {
-	res := monitorState{duration: time.Since(obj.runTime)}
+	res := monitorState{
+		showStateLen: obj.showStateLen,
+		duration:     time.Since(obj.runTime)}
 
 	obj.mu.Lock()
 	defer obj.mu.Unlock()
@@ -99,9 +103,11 @@ type monitorState struct {
 	duration                 time.Duration
 	totalSize, currentSize   int64
 	totalCount, currentCount int
+
+	showStateLen int
 }
 
-func (obj *monitorState) show(out io.Writer, fmtState string, curDuration *time.Duration, curSize *int64) {
+func (obj *monitorState) show(out io.Writer, fmtState string, curDuration *time.Duration, curSize *int64) int {
 	var totalSpeed, currentSpped int64
 
 	if obj.duration.Milliseconds() > 0 {
@@ -120,12 +126,15 @@ func (obj *monitorState) show(out io.Writer, fmtState string, curDuration *time.
 		*curSize = obj.currentSize
 	}
 
-	fmt.Fprintf(out,
+	fmt.Fprint(out, strings.Repeat(" ", obj.showStateLen), "\r")
+	n, _ := fmt.Fprintf(out,
 		fmtState,
 		obj.currentCount, obj.totalCount,
 		byteCount(obj.currentSize), byteCount(obj.totalSize),
 		obj.duration.Truncate(time.Second),
 		byteCount(currentSpped), byteCount(totalSpeed))
+
+	return max(obj.showStateLen, n)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
