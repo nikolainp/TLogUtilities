@@ -82,13 +82,13 @@ func Test_monitor_showCurrentState(t *testing.T) {
 				totalSize: 20, totalCount: 20,
 				currentSize: 15, currentCount: 15},
 			args: args{curDuration: time.Duration(10), curSize: 10},
-			want: "Load data: files: 15/20 size: 15b/20b time: 0s [speed 0b/s/0b/s ]"},
+			want: "\rLoad data: files: 15/20 size: 15b/20b time: 0s [speed 0b/s/0b/s ]"},
 		{name: "test 2",
 			obj: &monitorState{duration: time.Duration(20000000),
 				totalSize: 20, totalCount: 20,
 				currentSize: 15, currentCount: 15},
 			args: args{curDuration: time.Duration(10000000), curSize: 10},
-			want: "Load data: files: 15/20 size: 15b/20b time: 0s [speed 50.0kb/s/750b/s ]"},
+			want: "\rLoad data: files: 15/20 size: 15b/20b time: 0s [speed 50.0kb/s/750b/s ]"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

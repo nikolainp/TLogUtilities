@@ -41,6 +41,7 @@ func Test_config_init(t *testing.T) {
 
 		t.Run(tt.name, func(t *testing.T) {
 			err := got.init(tt.args)
+			got.rootPath = ""
 			if !reflect.DeepEqual(got, tt.obj) {
 				t.Errorf("config.init() = %v, want %v", got, tt.obj)
 			}

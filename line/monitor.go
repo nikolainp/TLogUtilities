@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -30,20 +29,20 @@ type monitor struct {
 	totalSize, currentSize   int64
 	totalCount, currentCount int
 
-	mu sync.Mutex
+	// mu sync.Mutex
 }
 
 func (obj *monitor) StartProcessing(size int64, count int) {
-	obj.mu.Lock()
-	defer obj.mu.Unlock()
+	// obj.mu.Lock()
+	// defer obj.mu.Unlock()
 
 	obj.totalSize += size
 	obj.totalCount += count
 }
 
 func (obj *monitor) FinishProcessing(size int64, count int) {
-	obj.mu.Lock()
-	defer obj.mu.Unlock()
+	// obj.mu.Lock()
+	// defer obj.mu.Unlock()
 
 	obj.currentSize += size
 	obj.currentCount += count
@@ -56,7 +55,7 @@ func (obj *monitor) Run(ctx context.Context) {
 	obj.totalCount = 0
 	obj.currentCount = 0
 
-	go obj.showState(ctx)
+	obj.showState(ctx)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -75,6 +74,7 @@ func (obj *monitor) showState(ctx context.Context) {
 			obj.showStateLen = state.show(os.Stderr, obj.fmtShowState, &curDuration, &curSize)
 
 		case <-ctx.Done():
+			fmt.Fprint(os.Stderr, "monitor stop\n")
 			return
 		}
 	}
@@ -85,8 +85,8 @@ func (obj *monitor) getState() monitorState {
 		showStateLen: obj.showStateLen,
 		duration:     time.Since(obj.runTime)}
 
-	obj.mu.Lock()
-	defer obj.mu.Unlock()
+	// obj.mu.Lock()
+	// defer obj.mu.Unlock()
 
 	res.totalSize = obj.totalSize
 	res.totalCount = obj.totalCount

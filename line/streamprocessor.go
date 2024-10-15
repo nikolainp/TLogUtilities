@@ -19,7 +19,7 @@ func NewStreamProcessor(callBack func(int64, int)) StreamProcessor {
 	obj := new(streamProcessor)
 
 	obj.monitor = callBack
-	obj.bufSize = 1024 * 1024 * 10
+	obj.bufSize = 1024 * 1024 * 1
 
 	obj.poolBuf = sync.Pool{New: func() interface{} {
 		lines := make([]byte, obj.bufSize)
@@ -50,21 +50,21 @@ func (obj *streamProcessor) Run(ctx context.Context, sName string, sIn io.Reader
 		}
 		return prefix + ":"
 	}
-	goFunc := func(work func()) {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			work()
-		}()
-	}
+	// goFunc := func(work func()) {
+	// 	wg.Add(1)
+	// 	go func() {
+	// 		defer wg.Done()
+	// 		work()
+	// 	}()
+	// }
 
 	obj.prefixFirstLine = []byte(getPrefix(sName))
 	obj.prefixSecondLine = []byte("<line>")
 
 	obj.chBuf = make(chan streamBuffer, 1)
 
-	goFunc(func() { obj.doRead(ctx, sIn) })
-	goFunc(func() { obj.doWrite(ctx, sOut) })
+	goFunc(&wg, func() { obj.doRead(ctx, sIn) })
+	goFunc(&wg, func() { obj.doWrite(ctx, sOut) })
 
 	wg.Wait()
 
@@ -107,6 +107,7 @@ func (obj *streamProcessor) doRead(ctx context.Context, sIn io.Reader) {
 			select {
 			case obj.chBuf <- streamBuffer{buf, n}:
 			case <-ctx.Done():
+				fmt.Fprint(os.Stderr, "read stop\n")
 				isBreak = true
 			}
 		}
@@ -141,6 +142,7 @@ func (obj *streamProcessor) doWrite(ctx context.Context, sOut io.Writer) {
 		for i := range bufSlice {
 			select {
 			case <-ctx.Done():
+				fmt.Fprint(os.Stderr, "write stop\n")
 				return
 			default:
 
@@ -183,6 +185,7 @@ func (obj *streamProcessor) doWrite(ctx context.Context, sOut io.Writer) {
 				isBreak = true
 			}
 		case <-ctx.Done():
+			fmt.Fprint(os.Stderr, "write stop\n")
 			isBreak = true
 		}
 	}

@@ -6,11 +6,12 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"sync"
 )
 
 type FilePathWalker interface {
-	Add(...string)
-	Run(context.Context) <-chan string
+	Add(...string) <-chan string
+	Run(context.Context)
 }
 
 func NewFilePathWalker(callBack func(int64, int)) FilePathWalker {
@@ -33,16 +34,20 @@ type filePathWalker struct {
 	output chan string
 }
 
-func (obj *filePathWalker) Add(path ...string) {
+func (obj *filePathWalker) Add(path ...string) <-chan string {
 	obj.rootPaths = append(obj.rootPaths, path...)
-}
-
-func (obj *filePathWalker) Run(ctx context.Context) <-chan string {
-
-	go obj.runWalk(ctx)
-	go obj.runOutput(ctx)
 
 	return obj.output
+}
+
+func (obj *filePathWalker) Run(ctx context.Context) {
+
+	var wg sync.WaitGroup
+	defer wg.Wait()
+
+	goFunc(&wg, func() { obj.runWalk(ctx) })
+	obj.runOutput(ctx)
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -52,7 +57,8 @@ func (obj *filePathWalker) runWalk(ctx context.Context) {
 
 	for _, path := range obj.rootPaths {
 		if err := obj.runPathWalk(ctx, path, filepath.Walk); err != nil {
-			fmt.Fprintf(os.Stderr, "Error walking the path %q: %v\n", path, err)
+			//fmt.Fprintf(os.Stderr, "Error walking the path %q: %v\n", path, err)
+			break
 		}
 	}
 }
@@ -88,7 +94,7 @@ func (obj *filePathWalker) runPathWalk(ctx context.Context, path string, worker 
 
 	walkFunc := func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
-			//fmt.Fprintf(os.Stderr, "Error walking the path %q: %v\n", path, err)
+			fmt.Fprintf(os.Stderr, "Error: %q: %v\n", path, err)
 			return err
 		}
 		if info.IsDir() {

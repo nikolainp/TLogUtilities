@@ -27,7 +27,7 @@ type fileQueue struct {
 }
 
 func (obj *fileQueue) Run(ctx context.Context) {
-	go obj.readFiles(ctx)
+	obj.readFiles(ctx)
 }
 
 func (obj *fileQueue) Pop() (string, io.ReadCloser, bool) {
@@ -58,6 +58,7 @@ func (obj *fileQueue) readFiles(ctx context.Context) {
 				isBreak = true
 			}
 		case <-ctx.Done():
+			fmt.Fprint(os.Stderr, "queue stop\n")
 			isBreak = true
 		}
 	}

@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sync"
 	"syscall"
 )
 
@@ -19,19 +20,24 @@ var (
 // var cancelChan chan bool
 
 func main() {
+	var wg sync.WaitGroup
+	defer wg.Wait()
 
 	ctx, cancel := withSignalNotify(context.Background())
 	defer cancel()
 
 	conf := getConfig(os.Args)
-	monitor := NewMonitor("Load data: files: %d/%d size: %s/%s time: %s [speed %s/s/%s/s ]")
+	monitor := NewMonitor("Load data: files: %d/%d size: %s/%s time: %s [%s/s/%s/s]")
 	walker := NewFilePathWalker(monitor.StartProcessing)
 	processor := NewStreamProcessor(monitor.FinishProcessing)
-	walker.Add(conf.paths...)
 
-	monitor.Run(ctx)
-	queue := NewFileQueue(walker.Run(ctx))
-	queue.Run(ctx)
+	queue := NewFileQueue(walker.Add(conf.paths...))
+
+	if conf.isShowProgress {
+		goFunc(&wg, func() { monitor.Run(ctx) })
+	}
+	goFunc(&wg, func() { walker.Run(ctx) })
+	goFunc(&wg, func() { queue.Run(ctx) })
 
 	for isBreak := false; !isBreak; {
 		select {
@@ -61,6 +67,7 @@ func main() {
 			}
 		}
 	}
+
 }
 
 func getConfig(args []string) (conf config) {
@@ -92,13 +99,22 @@ func withSignalNotify(ctx context.Context) (context.Context, context.CancelFunc)
 			// Run Cleanup
 			fmt.Fprintf(os.Stderr, "\nCaptured %v, stopping and exiting...\n", signal)
 			cancel()
-			os.Exit(0)
+			//os.Exit(0)
 		case <-ctxCancel.Done():
+			fmt.Fprint(os.Stderr, "signal stop\n")
 			return
 		}
 	}()
 
 	return ctxCancel, cancel
+}
+
+func goFunc(wg *sync.WaitGroup, do func()) {
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		do()
+	}()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
