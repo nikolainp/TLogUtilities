@@ -6,6 +6,8 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"sync"
 	"syscall"
 )
 
@@ -114,43 +116,5 @@ func goFunc(wg *sync.WaitGroup, do func()) {
 		do()
 	}()
 }
-
-///////////////////////////////////////////////////////////////////////////////
-
-// type pathWalker struct {
-// 	rootPath string
-// 	check    StreamProcessor
-
-// 	isNeedPrefix bool
-// }
-
-// func (obj *pathWalker) init(isNeedPrefix bool) {
-// 	obj.rootPath, _ = os.Getwd()
-// 	obj.check = NewStreamProcessor(nil)
-
-// 	obj.isNeedPrefix = isNeedPrefix
-// }
-
-// func (obj *pathWalker) pathWalk(basePath string) {
-// 	err := filepath.Walk(basePath, func(path string, info fs.FileInfo, err error) error {
-// 		if err != nil {
-// 			fmt.Fprintf(os.Stderr, "Prevent panic by handling failure accessing a path %q: %v\n", path, err)
-// 			return err
-// 		}
-// 		if info.IsDir() {
-// 			return nil
-// 		}
-// 		obj.doProcess(path)
-
-// 		if isCancel() {
-// 			return fmt.Errorf("process is cancel")
-// 		}
-
-// 		return nil
-// 	})
-// 	if err != nil {
-// 		fmt.Fprintf(os.Stderr, "Error walking the path %q: %v\n", basePath, err)
-// 	}
-// }
 
 ///////////////////////////////////////////////////////////////////////////////
