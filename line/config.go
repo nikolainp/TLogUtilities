@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"flag"
+	"os"
 )
 
 type printUsage struct {
@@ -15,20 +16,24 @@ type printVersion struct {
 
 type config struct {
 	programName string
+	rootPath    string
 
-	isNeedPrefix bool
-	paths        []string
+	isShowProgress bool
+	isNeedPrefix   bool
+	paths          []string
 }
 
 func (obj *config) init(args []string) (err error) {
 	var isPrintVersion, stripOutput bool
 
 	obj.programName = args[0]
-	fsOut := &bytes.Buffer{}
+	obj.rootPath, _ = os.Getwd()
 
+	fsOut := &bytes.Buffer{}
 	fs := flag.NewFlagSet(args[0], flag.ContinueOnError)
 	fs.SetOutput(fsOut)
 	fs.BoolVar(&isPrintVersion, "v", false, "print version")
+	fs.BoolVar(&obj.isShowProgress, "p", false, "shows the progress of data through")
 	fs.BoolVar(&stripOutput, "s", false, "without filename in line")
 
 	if err := fs.Parse(args[1:]); err != nil {
@@ -39,6 +44,7 @@ func (obj *config) init(args []string) (err error) {
 		return printVersion{}
 	}
 
+	obj.isShowProgress = obj.isShowProgress && ouputIsPiped()
 	obj.isNeedPrefix = !stripOutput
 	obj.paths = fs.Args()
 
@@ -48,4 +54,13 @@ func (obj *config) init(args []string) (err error) {
 	}
 
 	return nil
+}
+
+func ouputIsPiped() bool {
+	fi, err := os.Stdout.Stat()
+	if err != nil {
+		return false
+	}
+
+	return (fi.Mode() & os.ModeNamedPipe) != 0
 }
