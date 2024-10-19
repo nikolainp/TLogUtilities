@@ -67,17 +67,21 @@ func (obj *monitor) showState(ctx context.Context) {
 	var curDuration time.Duration
 	var curSize int64
 
-	for {
+	for isBreak := false; !isBreak; {
 		select {
 		case <-ticker.C:
 			state := obj.getState()
 			obj.showStateLen = state.show(os.Stderr, obj.fmtShowState, &curDuration, &curSize)
 
 		case <-ctx.Done():
-			fmt.Fprint(os.Stderr, "monitor stop\n")
-			return
+			//fmt.Fprint(os.Stderr, "monitor stop\n")
+			isBreak = true
 		}
 	}
+
+	state := obj.getState()
+	state.show(os.Stderr, obj.fmtShowState, &curDuration, &curSize)
+	fmt.Fprint(os.Stderr, "\n")
 }
 
 func (obj *monitor) getState() monitorState {

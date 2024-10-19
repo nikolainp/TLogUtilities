@@ -101,7 +101,7 @@ func withSignalNotify(ctx context.Context) (context.Context, context.CancelFunc)
 			cancel()
 			//os.Exit(0)
 		case <-ctxCancel.Done():
-			fmt.Fprint(os.Stderr, "signal stop\n")
+			//fmt.Fprint(os.Stderr, "signal stop\n")
 			return
 		}
 	}()
