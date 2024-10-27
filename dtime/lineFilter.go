@@ -114,15 +114,6 @@ func (obj *lineFilter) isTrueLineInvolve(data []byte) bool {
 ///////////////////////////////////////////////////////////////////////////////
 
 func getStrTimePosition(data []byte) (begin, finish int) {
-	isNumber := func(data byte) bool {
-		if data == '0' || data == '1' || data == '2' || data == '3' ||
-			data == '4' || data == '5' || data == '6' || data == '7' ||
-			data == '8' || data == '9' {
-			return true
-		}
-
-		return false
-	}
 
 	logPositin := bytes.Index(data, []byte(".log:"))
 	if logPositin < 8 || len(data) < logPositin+18 {
@@ -164,13 +155,13 @@ func getStrTimePosition(data []byte) (begin, finish int) {
 	return
 }
 
-func getStrDuration(data []byte) []byte {
+func getStrDuration(data []byte) ([]byte, int) {
 	commaPosition := bytes.Index(data, []byte(","))
 	if commaPosition == -1 {
-		return nil
+		return nil, commaPosition
 	}
 
-	return data[:commaPosition]
+	return data[:commaPosition], commaPosition
 }
 
 func getStrTimeFromLine(data []byte) (time []byte, duration []byte) {
@@ -181,7 +172,7 @@ func getStrTimeFromLine(data []byte) (time []byte, duration []byte) {
 	}
 	strTime := data[timeBegin:timeFinish]
 
-	strDuration := getStrDuration(data[timeFinish+1:])
+	strDuration, _ := getStrDuration(data[timeFinish+1:])
 	if strDuration == nil {
 		return nil, nil
 	}
@@ -202,6 +193,18 @@ func getStartTime(strLineTime []byte, strDuration []byte) time.Time {
 	startTime := stopTime.Add(-1 * duration)
 
 	return startTime
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+func isNumber(data byte) bool {
+	if data == '0' || data == '1' || data == '2' || data == '3' ||
+		data == '4' || data == '5' || data == '6' || data == '7' ||
+		data == '8' || data == '9' {
+		return true
+	}
+
+	return false
 }
 
 ///////////////////////////////////////////////////////////////////////////////
