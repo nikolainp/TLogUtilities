@@ -81,9 +81,14 @@ func (obj *filePathWalker) runOutput(ctx context.Context) {
 
 		if len(obj.bufPaths) == 0 {
 			isBreak = isDone
-		} else {
-			obj.output <- obj.bufPaths[0]
+			continue
+		}
+
+		select {
+		case obj.output <- obj.bufPaths[0]:
 			obj.bufPaths = obj.bufPaths[1:]
+		case <-ctx.Done():
+			isBreak = true
 		}
 	}
 }
