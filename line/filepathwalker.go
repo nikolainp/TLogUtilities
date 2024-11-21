@@ -66,25 +66,21 @@ func (obj *filePathWalker) runWalk(ctx context.Context) {
 func (obj *filePathWalker) runOutput(ctx context.Context) {
 	defer close(obj.output)
 
-	isDone := false
 	for isBreak := false; !isBreak; {
-		select {
-		case path, ok := <-obj.input:
-			if ok {
+		if len(obj.bufPaths) == 0 {
+			if path, ok := <-obj.input; ok {
 				obj.bufPaths = append(obj.bufPaths, path)
 			} else {
-				isDone = true
+				isBreak = true
 			}
-		case <-ctx.Done():
-			isBreak = true
-		}
-
-		if len(obj.bufPaths) == 0 {
-			isBreak = isDone
 			continue
 		}
 
 		select {
+		case path, ok := <-obj.input:
+			if ok {
+				obj.bufPaths = append(obj.bufPaths, path)
+			} 
 		case obj.output <- obj.bufPaths[0]:
 			obj.bufPaths = obj.bufPaths[1:]
 		case <-ctx.Done():
