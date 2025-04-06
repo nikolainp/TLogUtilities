@@ -12,6 +12,7 @@ import (
 
 type StreamProcessor interface {
 	Run(context.Context, string, io.Reader, io.Writer)
+	SetStreamType(streamLineType)
 }
 
 func NewStreamProcessor(callBack func(int64, int)) StreamProcessor {
@@ -39,6 +40,8 @@ type streamProcessor struct {
 	bufSize          int
 	prefixFirstLine  []byte
 	prefixSecondLine []byte
+
+	isFirstLine func([]byte) bool
 }
 
 func (obj *streamProcessor) Run(ctx context.Context, sName string, sIn io.Reader, sOut io.Writer) {
@@ -50,13 +53,6 @@ func (obj *streamProcessor) Run(ctx context.Context, sName string, sIn io.Reader
 		}
 		return prefix + ":"
 	}
-	// goFunc := func(work func()) {
-	// 	wg.Add(1)
-	// 	go func() {
-	// 		defer wg.Done()
-	// 		work()
-	// 	}()
-	// }
 
 	obj.prefixFirstLine = []byte(getPrefix(sName))
 	obj.prefixSecondLine = []byte("<line>")
@@ -71,20 +67,23 @@ func (obj *streamProcessor) Run(ctx context.Context, sName string, sIn io.Reader
 	obj.monitor(0, 1)
 }
 
+func (obj *streamProcessor) SetStreamType(t streamLineType) {
+	switch t {
+	case streamNoneType:
+
+	case streamTLType:
+		obj.isFirstLine = obj.isFirstLineTypeTL
+	case streamAnsType:
+		obj.isFirstLine = obj.isFirstLineTypeAns
+	}
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 type streamBuffer struct {
 	buf *[]byte
 	len int
 }
-
-type streamLineType int
-
-const (
-	streamNoneType streamLineType = iota
-	streamTLType
-	streamAnsType
-)
 
 func (obj *streamProcessor) doRead(ctx context.Context, sIn io.Reader) {
 
@@ -120,23 +119,34 @@ func (obj *streamProcessor) doWrite(ctx context.Context, sOut io.Writer) {
 
 	writer := bufio.NewWriterSize(sOut, obj.bufSize*2)
 	lastLine := make([]byte, obj.bufSize*2)
+	isFileBeginning := true
 	isExistsLastLine := false
-	streamType := streamNoneType
 
 	writeBuffer := func(buf []byte, n int) {
 		isLastStringFull := bytes.Equal(buf[n-1:n], []byte("\n"))
 
 		bufSlice := bytes.Split(buf[:n], []byte("\n"))
 
-		if streamType == streamNoneType {
-			if 3 <= len(bufSlice[0]) &&
-				bytes.Equal(bufSlice[0][:3], []byte("\ufeff")) {
-				streamType = streamTLType
-				bufSlice[0] = bufSlice[0][3:]
-			}
+		if 3 <= len(bufSlice[0]) && bytes.Equal(bufSlice[0][:3], []byte("\ufeff")) {
+			obj.isFirstLine = obj.isFirstLineTypeTL
+			bufSlice[0] = bufSlice[0][3:]
+		}
 
+		if obj.isFirstLine == nil {
+			switch {
+			case obj.isFirstLineTypeTL(bufSlice[0]):
+				obj.isFirstLine = obj.isFirstLineTypeTL
+			case obj.isFirstLineTypeAns(bufSlice[0]):
+				obj.isFirstLine = obj.isFirstLineTypeAns
+			default:
+				obj.isFirstLine = obj.isFirstLineTypeTL
+			}
+		}
+
+		if isFileBeginning {
 			writeLine(writer, obj.prefixFirstLine, bufSlice[0])
 			bufSlice = bufSlice[1:]
+			isFileBeginning = false
 		}
 
 		for i := range bufSlice {
@@ -206,7 +216,7 @@ func (obj *streamProcessor) lineProcessor(data []byte, writer io.Writer) {
 	}
 }
 
-func (obj *streamProcessor) isFirstLine(data []byte) bool {
+func (obj *streamProcessor) isFirstLineTypeTL(data []byte) bool {
 
 	isNumber := func(data byte) bool {
 		if data == '0' || data == '1' || data == '2' || data == '3' ||
@@ -243,6 +253,73 @@ func (obj *streamProcessor) isFirstLine(data []byte) bool {
 	}
 
 	return true
+}
+
+func (obj *streamProcessor) isFirstLineTypeAns(data []byte) bool {
+
+	// `^\d{4}\/d\d\/\d\d\-\d\d\:\d\d\:\d\d\.\d{3} \[\w+`
+	if len(data) < 14 {
+		return false
+	}
+	if !isNumber(data[0]) || !isNumber(data[1]) || !isNumber(data[2]) || !isNumber(data[3]) {
+		return false
+	}
+	if data[4] != '/' {
+		return false
+	}
+	if !isNumber(data[5]) || !isNumber(data[6]) {
+		return false
+	}
+	if data[7] != '/' {
+		return false
+	}
+	if !isNumber(data[8]) || !isNumber(data[9]) {
+		return false
+	}
+	if data[10] != '-' {
+		return false
+	}
+	if !isNumber(data[11]) || !isNumber(data[12]) {
+		return false
+	}
+	if data[13] != ':' {
+		return false
+	}
+	if !isNumber(data[14]) || !isNumber(data[15]) {
+		return false
+	}
+	if data[16] != ':' {
+		return false
+	}
+	if !isNumber(data[17]) || !isNumber(data[18]) {
+		return false
+	}
+	if data[19] != '.' {
+		return false
+	}
+	if !isNumber(data[20]) || !isNumber(data[21]) || !isNumber(data[22]) {
+		return false
+	}
+	if data[23] != ' ' {
+		return false
+	}
+	if data[24] != '[' {
+		return false
+	}
+
+	return true
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+func isNumber(data byte) bool {
+	if data == '0' || data == '1' || data == '2' || data == '3' ||
+		data == '4' || data == '5' || data == '6' || data == '7' ||
+		data == '8' || data == '9' {
+		return true
+	}
+
+	return false
 }
 
 func checkError(err error) {

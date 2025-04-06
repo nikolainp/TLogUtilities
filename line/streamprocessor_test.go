@@ -72,7 +72,32 @@ test:32:54.905000-0,EXCP,1,process=ragent,OSThread=3668,ClientID=4223,Exception=
 	}
 }
 
-func Test_streamProcessor_isFirstLine(t *testing.T) {
+func Test_streamProcessor_SetStreamType(t *testing.T) {
+	var obj streamProcessor
+
+	tests := []struct {
+		name string
+		args streamLineType
+		data []byte
+		want bool
+	}{
+		{"test 1", streamTLType, []byte("32:47.733006-0,EXCPCNTX,"), true},
+		{"test 2", streamTLType, []byte("2024/11/29-15:41:25.263 [launcher-start-thread (start)](12) I! com.e1c.chassis.config.internal.yaml.YamlPersister"), false},
+		{"test 3", streamAnsType, []byte("32:47.733006-0,EXCPCNTX,"), false},
+		{"test 4", streamAnsType, []byte("2024/11/29-15:41:25.263 [launcher-start-thread (start)](12) I! com.e1c.chassis.config.internal.yaml.YamlPersister"), true},
+	}
+	for _, tt := range tests {
+
+		t.Run(tt.name, func(t *testing.T) {
+			obj.SetStreamType(tt.args)
+			if got := obj.isFirstLine(tt.data); got != tt.want {
+				t.Errorf("lineChecker.isFirstLine() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_streamProcessor_isFirstLineTypeTL(t *testing.T) {
 	var obj streamProcessor
 
 	tests := []struct {
@@ -87,8 +112,30 @@ func Test_streamProcessor_isFirstLine(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := obj.isFirstLine(tt.in0); got != tt.want {
+			if got := obj.isFirstLineTypeTL(tt.in0); got != tt.want {
 				t.Errorf("lineChecker.isFirstLine() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_streamProcessor_isFirstLineTypeAns(t *testing.T) {
+	var obj streamProcessor
+
+	tests := []struct {
+		name string
+		in0  []byte
+		want bool
+	}{
+		{"test 1", []byte(""), false},
+		{"test 2", []byte("32:47.733006-0,EXCPCNTX,"), false},
+		{"test 3", []byte("2024/11/29-15:41:25.263 [launcher-start-thread (start)](12) I! com.e1c.chassis.config.internal.yaml.YamlPersister"), true},
+		{"test 4", []byte("81029657-3fe6-4cd6-80c0-36de78fe6657"), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := obj.isFirstLineTypeAns(tt.in0); got != tt.want {
+				t.Errorf("streamProcessor.isFirstLineTypeB() = %v, want %v", got, tt.want)
 			}
 		})
 	}

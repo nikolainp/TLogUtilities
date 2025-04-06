@@ -16,6 +16,7 @@ func Test_config_init(t *testing.T) {
 			programName:  "programname",
 			isNeedPrefix: true,
 			paths:        []string{},
+			streamType:   streamNoneType,
 		}, true},
 		{
 			"test 2",
@@ -24,6 +25,7 @@ func Test_config_init(t *testing.T) {
 				programName:  "programname",
 				isNeedPrefix: false,
 				paths:        []string{},
+				streamType:   streamNoneType,
 			},
 			true},
 		{
@@ -33,8 +35,39 @@ func Test_config_init(t *testing.T) {
 				programName:  "programname",
 				isNeedPrefix: false,
 				paths:        []string{"a1", "b2"},
+				streamType:   streamNoneType,
 			},
 			false},
+		{
+			"test 4",
+			[]string{"programname", "-tl", "a1"},
+			config{
+				programName:  "programname",
+				isNeedPrefix: true,
+				paths:        []string{"a1"},
+				streamType:   streamTLType,
+			},
+			false},
+		{
+			"test 5",
+			[]string{"programname", "-ans", "a1"},
+			config{
+				programName:  "programname",
+				isNeedPrefix: true,
+				paths:        []string{"a1"},
+				streamType:   streamAnsType,
+			},
+			false},
+		{
+			"test 6",
+			[]string{"programname", "-tl", "-ans", "a1"},
+			config{
+				programName:  "programname",
+				isNeedPrefix: true,
+				paths:        []string{"a1"},
+				streamType:   streamNoneType,
+			},
+			true},
 	}
 	for _, tt := range tests {
 		var got config
@@ -46,7 +79,7 @@ func Test_config_init(t *testing.T) {
 				t.Errorf("config.init() = %v, want %v", got, tt.obj)
 			}
 			if (err != nil) != tt.wantErr {
-				t.Errorf("config.init() error = %T, wantErr %T", err, tt.wantErr)
+				t.Errorf("config.init() error = %T, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

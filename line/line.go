@@ -30,6 +30,7 @@ func main() {
 	monitor := NewMonitor("Load data: files: %d/%d size: %s/%s time: %s [%s/s/%s/s]")
 	walker := NewFilePathWalker(monitor.StartProcessing)
 	processor := NewStreamProcessor(monitor.FinishProcessing)
+	processor.SetStreamType(conf.streamType)
 
 	queue := NewFileQueue(walker.Add(conf.paths...))
 
