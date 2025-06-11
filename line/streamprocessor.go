@@ -106,7 +106,7 @@ func (obj *streamProcessor) doRead(ctx context.Context, sIn io.Reader) {
 			select {
 			case obj.chBuf <- streamBuffer{buf, n}:
 			case <-ctx.Done():
-				fmt.Fprint(os.Stderr, "read stop\n")
+				//fmt.Fprint(os.Stderr, "read stop\n")
 				isBreak = true
 			}
 		}
@@ -152,7 +152,7 @@ func (obj *streamProcessor) doWrite(ctx context.Context, sOut io.Writer) {
 		for i := range bufSlice {
 			select {
 			case <-ctx.Done():
-				fmt.Fprint(os.Stderr, "write stop\n")
+				//fmt.Fprint(os.Stderr, "write stop\n")
 				return
 			default:
 
@@ -195,7 +195,7 @@ func (obj *streamProcessor) doWrite(ctx context.Context, sOut io.Writer) {
 				isBreak = true
 			}
 		case <-ctx.Done():
-			fmt.Fprint(os.Stderr, "write stop\n")
+			//fmt.Fprint(os.Stderr, "write stop\n")
 			isBreak = true
 		}
 	}
