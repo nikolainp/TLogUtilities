@@ -42,11 +42,11 @@ func main() {
 
 func getConfig(args []string) (conf config) {
 	if err := conf.init(args); err != nil {
-		switch err.(type) {
+		switch err := err.(type) {
 		case printVersion:
 			fmt.Printf("Version: %s (%s)\n", version, date)
 		case printUsage:
-
+			fmt.Printf("%s", err.usage)
 		default:
 			fmt.Fprintf(os.Stderr, "Config error: %v\n", err)
 		}

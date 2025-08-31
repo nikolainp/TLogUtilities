@@ -3,14 +3,19 @@ package main
 import (
 	"fmt"
 	"time"
+	_ "embed"
 )
 
 type printUsage struct {
 	error
+	usage string
 }
 type printVersion struct {
 	error
 }
+
+//go:embed usage.txt
+var usage string
 
 type operationType int
 
@@ -67,6 +72,9 @@ func (obj *config) init(args []string) (err error) {
 	case 2:
 		if args[1] == "-v" {
 			return printVersion{}
+		}
+		if args[1] == "-h" {
+			return printUsage{usage: usage}
 		}
 
 		obj.operation = operationFilterByTyme

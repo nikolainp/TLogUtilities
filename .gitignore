@@ -24,4 +24,4 @@ cmd/__debug_bin
 *.code-workspace
 test/
 dist/
-*.txt
+

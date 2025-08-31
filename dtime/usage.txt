@@ -1,0 +1,14 @@
+usage: dtime [<flags>] [<args> ...]
+
+Flags:
+  -h    show help
+  -v    display version and exit
+
+Arguments:
+  beginTime    (yyyy.mm.dd_hh.mm.ss) the start time of the period for which events will be selected
+
+  finishTime   (yyyy.mm.dd_hh.mm.ss) the finish time of the period for which events will be selected
+
+  edgeType     (start|stop|inner|outter) event selection option: by event start time, by event end time (default), event occurred entirely in a given period, or the given period falls within the event period
+
+
