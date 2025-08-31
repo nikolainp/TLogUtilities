@@ -25,7 +25,7 @@ func main() {
 	conf := getConfig(os.Args)
 
 	var fp fileProcessor
-	fp.init(conf.sourceFolder, conf.destinationFolder, conf.transferType)
+	fp.init(conf.sourceFolder, conf.destinationFolder, conf.transferType, conf.unzip)
 
 	var fc fileChecker
 	if err := fc.init(conf.fileNames); err != nil {
@@ -65,10 +65,6 @@ func pathWalk(basePath string, fp fileProcessor, fc fileChecker) {
 			fp.doProcess(path)
 		}
 
-		// if isCancel() {
-		// 	return fmt.Errorf("process is cancel")
-		// }
-
 		return nil
 	})
 	if err != nil {
@@ -83,12 +79,14 @@ type fileProcessor struct {
 	destination string
 
 	transferType dataTransferType
+	unzip        bool
 }
 
-func (obj *fileProcessor) init(source, destination string, transferType dataTransferType) {
+func (obj *fileProcessor) init(source, destination string, transferType dataTransferType, unzip bool) {
 	obj.source = source
 	obj.destination = destination
 	obj.transferType = transferType
+	obj.unzip = unzip
 }
 
 func (obj *fileProcessor) doProcess(fileName string) {
@@ -102,8 +100,10 @@ func (obj *fileProcessor) doProcess(fileName string) {
 	}
 
 	subFilePath := getSubFilePath(fileName)
-	destintion := filepath.Join(obj.destination, subFilePath)
-	err = createDirectory(filepath.Dir(destintion))
+	destinationFile := filepath.Join(obj.destination, subFilePath)
+	destinationFolder := filepath.Dir(destinationFile)
+
+	err = createDirectory(destinationFolder)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		return
@@ -111,11 +111,23 @@ func (obj *fileProcessor) doProcess(fileName string) {
 
 	switch obj.transferType {
 	case dataCopy:
-		fmt.Printf("cp %s %s\n", fileName, destintion)
-		err = copyFile(fileName, destintion)
+		if obj.unzip {
+			fmt.Printf("unzip %s %s\n", fileName, destinationFolder)
+			err = unzip(fileName, destinationFolder)
+		} else {
+			fmt.Printf("cp %s %s\n", fileName, destinationFile)
+			err = copyFile(fileName, destinationFile)
+		}
 	case dataMove:
-		fmt.Printf("mv %s %s\n", fileName, destintion)
-		err = moveFile(fileName, destintion)
+		if obj.unzip {
+			fmt.Printf("mvzip %s %s\n", fileName, destinationFolder)
+			if err = unzip(fileName, destinationFolder); err == nil {
+				err = os.Remove(fileName)
+			}
+		} else {
+			fmt.Printf("mv %s %s\n", fileName, destinationFile)
+			err = moveFile(fileName, destinationFile)
+		}
 	}
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
