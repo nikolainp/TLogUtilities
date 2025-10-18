@@ -208,7 +208,7 @@ func (obj *streamProcessor) lineProcessor(writer io.Writer, data []byte) {
 
 	dataLen := int64(len(data))
 
-	if data[dataLen - 1] == '\r' {
+	if dataLen > 1 && data[dataLen - 1] == '\r' {
 		data = data[:dataLen - 1]
 	}
 	obj.monitor(dataLen + 1, 0)
