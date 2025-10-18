@@ -159,7 +159,7 @@ func (obj *streamProcessor) doWrite(ctx context.Context, sOut io.Writer) {
 				if i == 0 && isExistsLastLine {
 					lastLine = append(lastLine, bufSlice[i]...)
 					if len(bufSlice) > 1 {
-						obj.lineProcessor(lastLine, writer)
+						obj.lineProcessor(writer, lastLine)
 						isExistsLastLine = false
 					}
 					continue
@@ -176,7 +176,7 @@ func (obj *streamProcessor) doWrite(ctx context.Context, sOut io.Writer) {
 					continue
 				}
 
-				obj.lineProcessor(bufSlice[i], writer)
+				obj.lineProcessor(writer, bufSlice[i])
 			}
 		}
 	}
@@ -190,7 +190,7 @@ func (obj *streamProcessor) doWrite(ctx context.Context, sOut io.Writer) {
 				obj.poolBuf.Put(buffer.buf)
 			} else {
 				if isExistsLastLine {
-					obj.lineProcessor(lastLine, writer)
+					obj.lineProcessor(writer, lastLine)
 				}
 				isBreak = true
 			}
@@ -204,9 +204,14 @@ func (obj *streamProcessor) doWrite(ctx context.Context, sOut io.Writer) {
 	checkError(writer.Flush())
 }
 
-func (obj *streamProcessor) lineProcessor(data []byte, writer io.Writer) {
+func (obj *streamProcessor) lineProcessor(writer io.Writer, data []byte) {
 
-	obj.monitor(int64(len(data)), 0)
+	dataLen := int64(len(data))
+
+	if data[dataLen - 1] == '\r' {
+		data = data[:dataLen - 1]
+	}
+	obj.monitor(dataLen + 1, 0)
 
 	if obj.isFirstLine(data) {
 		writeLine(writer, []byte{}, []byte("\n"))
@@ -327,6 +332,7 @@ func checkError(err error) {
 		fmt.Fprintln(os.Stderr, "Error: ", err)
 	}
 }
+
 func writeLine(writer io.Writer, prefix, line []byte) {
 	_, err := writer.Write(prefix)
 	checkError(err)
