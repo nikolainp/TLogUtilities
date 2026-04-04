@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 var (
@@ -103,6 +104,12 @@ func (obj *fileProcessor) doProcess(fileName string) {
 	destinationFile := filepath.Join(obj.destination, subFilePath)
 	destinationFolder := filepath.Dir(destinationFile)
 
+	ext1 := filepath.Ext(subFilePath)
+	ext2 := filepath.Ext(strings.TrimSuffix(subFilePath, ext1))
+	if ext1 != ".log" && ext2 != ".log" {
+		return
+	}
+
 	err = createDirectory(destinationFolder)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
@@ -111,7 +118,7 @@ func (obj *fileProcessor) doProcess(fileName string) {
 
 	switch obj.transferType {
 	case dataCopy:
-		if obj.unzip {
+		if obj.unzip && ext1 == ".zip" {
 			fmt.Printf("unzip %s %s\n", fileName, destinationFolder)
 			err = unzip(fileName, destinationFolder)
 		} else {
@@ -119,7 +126,7 @@ func (obj *fileProcessor) doProcess(fileName string) {
 			err = copyFile(fileName, destinationFile)
 		}
 	case dataMove:
-		if obj.unzip {
+		if obj.unzip && ext1 == ".zip" {
 			fmt.Printf("mvzip %s %s\n", fileName, destinationFolder)
 			if err = unzip(fileName, destinationFolder); err == nil {
 				err = os.Remove(fileName)
