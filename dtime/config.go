@@ -1,9 +1,9 @@
 package main
 
 import (
+	_ "embed"
 	"fmt"
 	"time"
-	_ "embed"
 )
 
 type printUsage struct {
@@ -114,6 +114,10 @@ func (obj *config) init(args []string) (err error) {
 			return err
 		}
 		obj.filterEdge = getEdgeType(args[3])
+		if obj.filterEdge == edgeNone {
+			return fmt.Errorf("%s - invalid value for event selection boundary", args[3])
+		}
+
 	}
 
 	return nil

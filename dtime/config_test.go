@@ -102,6 +102,17 @@ func Test_config_init(t *testing.T) {
 				operation:   operationFilterByTyme,
 			},
 			true},
+		{
+			"test 4 1",
+			[]string{"programname", "2024.01.20_12:33:44.012345", "2024.01.20_13:33:44.543210", "a"},
+			config{
+				programName: "programname",
+				operation:   operationFilterByTyme,
+				filterBeginTime:  time.Date(2024, 1, 20, 12, 33, 44, 12345000, time.Local),
+				filterFinishTime: time.Date(2024, 1, 20, 13, 33, 44, 543210000, time.Local),
+				filterEdge:       edgeNone,
+			},
+			true},
 	}
 	for _, tt := range tests {
 		var got config
