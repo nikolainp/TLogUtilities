@@ -35,14 +35,14 @@ func (obj *config) init(args []string) (err error) {
 	fs.BoolVar(&flagMove, "m", false, "move files")
 	fs.BoolVar(&obj.unzip, "z", false, "unzip files")
 
+	if flagPrintVersion {
+		return printVersion{}
+	}
+
 	if err := fs.Parse(args[1:]); fs.NArg() < 2 || err != nil {
 		fmt.Fprintf(fs.Output(), "Usage of %s:\n", os.Args[0])
 		fs.PrintDefaults()
 		return printUsage{error: err}
-	}
-
-	if flagPrintVersion {
-		return printVersion{}
 	}
 
 	if flagMove {
